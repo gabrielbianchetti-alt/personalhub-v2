@@ -1,1 +1,20 @@
-@AGENTS.md
+# PersonalHub v2
+
+**Documento-norte: [`SPEC-PERSONALHUB-V2.md`](./SPEC-PERSONALHUB-V2.md).** Leia antes de propor qualquer feature, tela ou tabela. O que não se justificar perante os Princípios (§2) e o Core Loop (§3) **não entra**.
+
+Veja também [`AGENTS.md`](./AGENTS.md) — esta versão do Next.js tem breaking changes; consulte `node_modules/next/dist/docs/` antes de escrever código.
+
+## Regras-chave (não violar sem aprovação)
+
+- **Três telas, só.** Hoje · Alunos · Cobrança (§4). Se algo não cabe numa delas, provavelmente não pertence à v2. Configurações ficam atrás de avatar/engrenagem, fora da navegação.
+- **A exceção é registrada; a regra é presumida** (§2.2). Aula acontecer é o normal e não se registra. `registros_aula` guarda **só exceções** (falta/extra/desmarcada); presença é derivada. Quem não registra nada não é punido — o fechamento sai correto pela config semanal.
+- **Cobrança é o core; gestão é subproduto** (§2.3). Nenhum fluxo pode atrapalhar cadastro → fechamento → WhatsApp.
+- **Tokens do §6.2 são a fonte da verdade visual.** Use as CSS variables (`--bg`, `--accent` coral `#F26B3A`, etc.), claro e escuro nascendo dos mesmos tokens. Não introduzir cores fora da paleta.
+- **Anti-padrões do §6.5 são proibidos:**
+  - Verde pintando dados ou saudações (verde só para sucesso/confirmação).
+  - Tabelas densas estilo planilha / tudo-caixa-com-borda.
+  - Glass empilhado / texto sobre blur sobre gradiente (glass só em 3 lugares — §6.4).
+  - Branco puro sobre branco; preto puro no dark.
+  - Mais de uma cor de destaque competindo na mesma tela.
+
+Regra de negócio em aberto (default §5): em `mensalidade`, falta **não** desconta valor; desmarcação com reposição é neutra. Configurável por professor só em v2.x.
