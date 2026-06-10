@@ -19,6 +19,9 @@ function isActive(pathname: string, href: string) {
 export function BottomTabBar() {
   const pathname = usePathname();
 
+  // Login não faz parte da navegação do app.
+  if (pathname === "/login") return null;
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50">
       <div className="mx-auto w-full max-w-[430px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

@@ -1,5 +1,6 @@
 import { alunosHoje } from "@/lib/mock";
 import { CheckinList } from "@/components/CheckinList";
+import { LogoutButton } from "@/components/LogoutButton";
 
 // Data por extenso em PT-BR: "Quarta, 10 de junho".
 function dataPorExtenso(now: Date): string {
@@ -21,6 +22,9 @@ export default function HojePage() {
     <div className="flex flex-1 flex-col">
       <header className="relative overflow-hidden px-5 pb-7 pt-12">
         <div className={`orbe orbe--${periodo}`} aria-hidden="true" />
+        <div className="absolute right-5 top-12">
+          <LogoutButton />
+        </div>
         <p className="relative text-sm font-medium text-text-muted">Hoje</p>
         <h1 className="relative mt-1 font-display text-[2.5rem] leading-[1.05] text-text">
           {dataPorExtenso(now)}
