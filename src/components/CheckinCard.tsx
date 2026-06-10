@@ -1,23 +1,29 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Check } from "lucide-react";
 import type { AlunoHoje } from "@/lib/mock";
 
 export function CheckinCard({
   aluno,
+  isPast,
+  isNext,
   onToggleFalta,
 }: {
   aluno: AlunoHoje;
+  isPast: boolean;
+  isNext: boolean;
   onToggleFalta: (id: string) => void;
 }) {
   const faltou = aluno.status === "faltou";
   const subtitle = aluno.avulso ? "Aula extra" : aluno.horario || "Presumido";
+  // Passado não-resolvido lê como "feito": check silencioso (--success), sem dimming.
+  const feito = isPast && !faltou && !aluno.avulso;
 
   return (
     <article
       className={`flex items-center justify-between rounded-[20px] bg-surface p-4 shadow-soft transition-all duration-200 ${
         faltou ? "opacity-60" : "opacity-100"
-      } ${aluno.avulso ? "card-in" : ""}`}
+      } ${isNext ? "ring-1 ring-accent/50" : ""} ${aluno.avulso ? "card-in" : ""}`}
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
@@ -34,10 +40,20 @@ export function CheckinCard({
             </span>
           )}
         </div>
-        <p className="text-sm text-text-muted">{subtitle}</p>
+        <div className="flex items-center gap-1.5 text-sm text-text-muted">
+          {feito && (
+            <Check
+              size={14}
+              strokeWidth={2.5}
+              className="shrink-0 text-success"
+              aria-label="feito"
+            />
+          )}
+          <span>{subtitle}</span>
+        </div>
       </div>
 
-      {/* Aluno esperado tem uma única ação: chip "Faltou" (toca de novo desfaz). */}
+      {/* Corrigir é sempre possível: o chip "Faltou" permanece mesmo no passado. */}
       <button
         type="button"
         aria-pressed={faltou}

@@ -1,13 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Plus } from "lucide-react";
 import type { AlunoHoje } from "@/lib/mock";
 import { todosAlunos } from "@/lib/mock";
 import { CheckinCard } from "./CheckinCard";
 import { ExtraSheet } from "./ExtraSheet";
 
-export function CheckinList({ initial }: { initial: AlunoHoje[] }) {
+function toMinutes(horario: string): number | null {
+  if (!horario) return null;
+  const [hh, mm] = horario.split(":").map(Number);
+  return hh * 60 + mm;
+}
+
+export function CheckinList({
+  initial,
+  nowMinutes,
+}: {
+  initial: AlunoHoje[];
+  nowMinutes: number;
+}) {
   const [alunos, setAlunos] = useState<AlunoHoje[]>(initial);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -62,11 +74,38 @@ export function CheckinList({ initial }: { initial: AlunoHoje[] }) {
     );
   }
 
+  // Classifica por horário relativo a "agora". Lista já vem ordenada por horário;
+  // avulsos (sem horário) ficam ao fim e contam como não-passados.
+  const itens = alunos.map((aluno) => {
+    const minutes = toMinutes(aluno.horario);
+    return { aluno, minutes, isPast: minutes !== null && minutes < nowMinutes };
+  });
+  // Divisor "agora" entra antes do primeiro não-passado.
+  const divisorIdx = itens.findIndex((i) => !i.isPast);
+  // "Próximo" destacado = primeiro não-passado com horário.
+  const proximoIdx = itens.findIndex((i) => !i.isPast && i.minutes !== null);
+
   return (
     <>
       <section className="flex flex-col gap-3 px-5">
-        {alunos.map((aluno) => (
-          <CheckinCard key={aluno.id} aluno={aluno} onToggleFalta={toggleFalta} />
+        {itens.map((item, i) => (
+          <Fragment key={item.aluno.id}>
+            {i === divisorIdx && (
+              <div className="flex items-center gap-3 py-1" aria-hidden="true">
+                <span className="size-1.5 rounded-full bg-accent" />
+                <span className="text-xs font-medium uppercase tracking-wider text-accent">
+                  agora
+                </span>
+                <span className="h-px flex-1 bg-accent/20" />
+              </div>
+            )}
+            <CheckinCard
+              aluno={item.aluno}
+              isPast={item.isPast}
+              isNext={i === proximoIdx}
+              onToggleFalta={toggleFalta}
+            />
+          </Fragment>
         ))}
 
         {/* Único caminho para extras: abre o sheet com todo o roster. */}

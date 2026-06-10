@@ -15,6 +15,7 @@ function dataPorExtenso(now: Date): string {
 export default function HojePage() {
   const now = new Date();
   const periodo = now.getHours() < 12 ? "manha" : "tarde";
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   return (
     <div className="flex flex-1 flex-col">
@@ -26,7 +27,7 @@ export default function HojePage() {
         </h1>
       </header>
 
-      <CheckinList initial={alunosHoje} />
+      <CheckinList initial={alunosHoje} nowMinutes={nowMinutes} />
     </div>
   );
 }
