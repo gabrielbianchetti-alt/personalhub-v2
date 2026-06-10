@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
+/* ── Tokens §6.2 ───────────────────────────────────────────────── */
+/* Modo claro: padrão de lançamento. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:            #FAF6F1;
+  --surface:       #FFFFFF;
+  --surface-soft:  #F3EDE6;
+  --text:          #1F1B16;
+  --text-muted:    #8A8178;
+  --accent:        #F26B3A;
+  --accent-soft:   #FBD9CB;
+  --success:       #2E9E6B;
+  --warning:       #E2A33C;
+  --danger:        #D9534F;
+  --glass-bg:      rgba(255, 255, 255, 0.65);
 }
 
+/* Modo escuro: nasce dos mesmos tokens. Toggle manual depois. */
+[data-theme="dark"] {
+  --bg:            #14202A;
+  --surface:       #1C2B37;
+  --surface-soft:  #243542;
+  --text:          #F2EDE7;
+  --text-muted:    #93A1AC;
+  --accent:        #F58A5C;
+  --accent-soft:   #2E3B45;
+  --glass-bg:      rgba(20, 32, 42, 0.6);
+}
+
+/* Expõe os tokens como utilitários Tailwind v4. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-bg:           var(--bg);
+  --color-surface:      var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-text:         var(--text);
+  --color-text-muted:   var(--text-muted);
+  --color-accent:       var(--accent);
+  --color-accent-soft:  var(--accent-soft);
+  --color-success:      var(--success);
+  --color-warning:      var(--warning);
+  --color-danger:       var(--danger);
+  --shadow-soft:        0 8px 30px -8px rgba(31, 27, 22, 0.12);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Display serifada (números-hero, datas) — §6.3 */
+.font-display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+}
+
+/* Glass cirúrgico — §6.4 (só na tab bar nesta sessão) */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Orbe-gradiente do header de Hoje — §6.4. Decorativo, varia com o período. */
+.orbe {
+  position: absolute;
+  top: -130px;
+  left: 50%;
+  width: 380px;
+  height: 300px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  filter: blur(55px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.orbe--manha {
+  /* manhã: laranja mais quente */
+  background: radial-gradient(circle, #F79A3C 0%, rgba(247, 154, 60, 0) 70%);
+}
+.orbe--tarde {
+  /* tarde: coral (accent) */
+  background: radial-gradient(circle, #F26B3A 0%, rgba(242, 107, 58, 0) 70%);
+}
+
+/* Entrada suave de card extra adicionado */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-in {
+  animation: card-in 220ms ease-out;
 }
