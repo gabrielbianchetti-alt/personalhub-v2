@@ -1,29 +1,52 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { AlunoHoje, StatusHoje } from "@/lib/mock";
+import type { AlunoHoje } from "@/lib/mock";
+import { todosAlunos } from "@/lib/mock";
 import { CheckinCard } from "./CheckinCard";
+import { ExtraSheet } from "./ExtraSheet";
 
 export function CheckinList({ initial }: { initial: AlunoHoje[] }) {
   const [alunos, setAlunos] = useState<AlunoHoje[]>(initial);
-  const extraSeq = useRef(0);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const setStatus = (id: string, status: StatusHoje) =>
-    setAlunos((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+  // Quem era esperado hoje — só para o hint "hoje" no sheet (segunda aula).
+  const esperadosIds = initial.map((a) => a.id);
 
-  const addExtra = () => {
-    extraSeq.current += 1;
-    setAlunos((prev) => [
-      ...prev,
-      {
-        id: `extra-${extraSeq.current}`,
-        nome: "Aula extra",
-        horario: "",
-        status: "extra",
-        avulso: true,
-      },
-    ]);
+  const toggleFalta = (id: string) =>
+    setAlunos((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? { ...a, status: a.status === "faltou" ? "presumido" : "faltou" }
+          : a,
+      ),
+    );
+
+  const addExtra = (rosterId: string) => {
+    setAlunos((prev) => {
+      // Já está na lista (esperado ou avulso já adicionado): soma no card.
+      if (prev.some((a) => a.id === rosterId)) {
+        return prev.map((a) =>
+          a.id === rosterId ? { ...a, extras: a.extras + 1 } : a,
+        );
+      }
+      // Fora do dia: entra como card avulso com badge "+1 extra".
+      const r = todosAlunos.find((x) => x.id === rosterId);
+      if (!r) return prev;
+      return [
+        ...prev,
+        {
+          id: r.id,
+          nome: r.nome,
+          horario: "",
+          status: "presumido",
+          extras: 1,
+          avulso: true,
+        },
+      ];
+    });
+    setSheetOpen(false);
   };
 
   // Estado vazio com voz humana (§4.1)
@@ -40,19 +63,30 @@ export function CheckinList({ initial }: { initial: AlunoHoje[] }) {
   }
 
   return (
-    <section className="flex flex-col gap-3 px-5">
-      {alunos.map((aluno) => (
-        <CheckinCard key={aluno.id} aluno={aluno} onStatus={setStatus} />
-      ))}
+    <>
+      <section className="flex flex-col gap-3 px-5">
+        {alunos.map((aluno) => (
+          <CheckinCard key={aluno.id} aluno={aluno} onToggleFalta={toggleFalta} />
+        ))}
 
-      <button
-        type="button"
-        onClick={addExtra}
-        className="mt-1 flex items-center justify-center gap-2 rounded-[20px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent transition-colors active:bg-accent-soft/40"
-      >
-        <Plus size={18} strokeWidth={2.4} />
-        aula extra
-      </button>
-    </section>
+        {/* Único caminho para extras: abre o sheet com todo o roster. */}
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="mt-1 flex items-center justify-center gap-2 rounded-[20px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent transition-colors active:bg-accent-soft/40"
+        >
+          <Plus size={18} strokeWidth={2.4} />
+          aula extra
+        </button>
+      </section>
+
+      <ExtraSheet
+        open={sheetOpen}
+        roster={todosAlunos}
+        esperadosIds={esperadosIds}
+        onPick={addExtra}
+        onClose={() => setSheetOpen(false)}
+      />
+    </>
   );
 }

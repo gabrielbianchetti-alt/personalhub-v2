@@ -1,26 +1,17 @@
 "use client";
 
-import { X, Plus } from "lucide-react";
-import type { AlunoHoje, StatusHoje } from "@/lib/mock";
-
-const SUBTITLE: Record<StatusHoje, (a: AlunoHoje) => string> = {
-  presumido: (a) => a.horario || "Presumido",
-  faltou: () => "Faltou",
-  extra: (a) => (a.avulso ? "Aula extra" : `${a.horario || ""} · extra`.trim().replace(/^· /, "")),
-};
+import { X } from "lucide-react";
+import type { AlunoHoje } from "@/lib/mock";
 
 export function CheckinCard({
   aluno,
-  onStatus,
+  onToggleFalta,
 }: {
   aluno: AlunoHoje;
-  onStatus: (id: string, status: StatusHoje) => void;
+  onToggleFalta: (id: string) => void;
 }) {
   const faltou = aluno.status === "faltou";
-  const extra = aluno.status === "extra";
-
-  const toggle = (target: StatusHoje) =>
-    onStatus(aluno.id, aluno.status === target ? "presumido" : target);
+  const subtitle = aluno.avulso ? "Aula extra" : aluno.horario || "Presumido";
 
   return (
     <article
@@ -29,50 +20,37 @@ export function CheckinCard({
       } ${aluno.avulso ? "card-in" : ""}`}
     >
       <div className="min-w-0">
-        <p
-          className={`truncate text-base font-medium transition-colors duration-200 ${
-            faltou ? "text-text-muted line-through" : "text-text"
-          }`}
-        >
-          {aluno.nome}
-        </p>
-        <p
-          className={`text-sm transition-colors duration-200 ${
-            extra ? "text-accent" : "text-text-muted"
-          }`}
-        >
-          {SUBTITLE[aluno.status](aluno)}
-        </p>
+        <div className="flex items-center gap-2">
+          <p
+            className={`truncate text-base font-medium transition-colors duration-200 ${
+              faltou ? "text-text-muted line-through" : "text-text"
+            }`}
+          >
+            {aluno.nome}
+          </p>
+          {aluno.extras > 0 && (
+            <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
+              +{aluno.extras} extra
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-text-muted">{subtitle}</p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 pl-3">
-        <button
-          type="button"
-          aria-pressed={faltou}
-          aria-label="Marcar falta"
-          onClick={() => toggle("faltou")}
-          className={`flex size-11 items-center justify-center rounded-full transition-colors ${
-            faltou
-              ? "bg-danger text-white"
-              : "bg-surface-soft text-text-muted active:bg-danger/10"
-          }`}
-        >
-          <X size={20} strokeWidth={2.4} />
-        </button>
-        <button
-          type="button"
-          aria-pressed={extra}
-          aria-label="Marcar aula extra"
-          onClick={() => toggle("extra")}
-          className={`flex size-11 items-center justify-center rounded-full transition-colors ${
-            extra
-              ? "bg-accent text-white"
-              : "bg-surface-soft text-text-muted active:bg-accent/10"
-          }`}
-        >
-          <Plus size={20} strokeWidth={2.4} />
-        </button>
-      </div>
+      {/* Aluno esperado tem uma única ação: chip "Faltou" (toca de novo desfaz). */}
+      <button
+        type="button"
+        aria-pressed={faltou}
+        onClick={() => onToggleFalta(aluno.id)}
+        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+          faltou
+            ? "bg-danger text-white"
+            : "bg-surface-soft text-text-muted active:bg-danger/10"
+        }`}
+      >
+        <X size={16} strokeWidth={2.4} />
+        Faltou
+      </button>
     </article>
   );
 }
