@@ -1,29 +1,26 @@
 "use client";
 
-import { X } from "lucide-react";
-import type { RosterVM } from "@/lib/hoje";
+// Bottom sheet glass genérico (§6.4 — sheets/modais são lugar sancionado de glass).
 
-// Bottom sheet glass (§6.4 — sheets são local sancionado de glass).
-// Único caminho para registrar aula extra; lista todo o roster.
-export function ExtraSheet({
+import { X } from "lucide-react";
+import type { ReactNode } from "react";
+
+export function Sheet({
   open,
-  roster,
-  esperadosIds,
-  onPick,
+  title,
   onClose,
+  children,
 }: {
   open: boolean;
-  roster: RosterVM[];
-  esperadosIds: string[];
-  onPick: (id: string) => void;
+  title: string;
   onClose: () => void;
+  children: ReactNode;
 }) {
   return (
     <div
       className={`fixed inset-0 z-[60] ${open ? "" : "pointer-events-none"}`}
       aria-hidden={!open}
     >
-      {/* backdrop */}
       <button
         type="button"
         aria-label="Fechar"
@@ -33,21 +30,18 @@ export function ExtraSheet({
           open ? "opacity-100" : "opacity-0"
         }`}
       />
-
-      {/* painel */}
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Adicionar aula extra"
+        aria-label={title}
         className={`absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px] transition-transform duration-300 ease-out ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
         <div className="glass rounded-t-3xl border-t border-white/40 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-soft">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-text-muted/30" />
-
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-2xl text-text">Aula extra</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-2xl text-text">{title}</h2>
             <button
               type="button"
               aria-label="Fechar"
@@ -58,24 +52,7 @@ export function ExtraSheet({
               <X size={18} strokeWidth={2.4} />
             </button>
           </div>
-
-          <ul className="flex max-h-[55vh] flex-col gap-0.5 overflow-y-auto pb-1">
-            {roster.map((r) => (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  tabIndex={open ? 0 : -1}
-                  onClick={() => onPick(r.id)}
-                  className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition-colors active:bg-surface-soft"
-                >
-                  <span className="text-base text-text">{r.nome}</span>
-                  {esperadosIds.includes(r.id) && (
-                    <span className="text-xs text-text-muted">hoje</span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
+          {children}
         </div>
       </div>
     </div>

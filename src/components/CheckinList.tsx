@@ -1,11 +1,17 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
-import type { AlunoHoje } from "@/lib/mock";
-import { todosAlunos } from "@/lib/mock";
+import type { AlunoHojeVM, PendenciaVM, RosterVM } from "@/lib/hoje";
+import {
+  marcarFalta,
+  desmarcarFalta,
+  adicionarExtra,
+  removerExtra,
+} from "@/app/actions/registros";
 import { CheckinCard } from "./CheckinCard";
 import { ExtraSheet } from "./ExtraSheet";
+import { Pendencias } from "./Pendencias";
 
 function toMinutes(horario: string): number | null {
   if (!horario) return null;
@@ -14,105 +20,153 @@ function toMinutes(horario: string): number | null {
 }
 
 export function CheckinList({
-  initial,
+  hojeIso,
   nowMinutes,
+  initial,
+  roster,
+  pendencias,
 }: {
-  initial: AlunoHoje[];
+  hojeIso: string;
   nowMinutes: number;
+  initial: AlunoHojeVM[];
+  roster: RosterVM[];
+  pendencias: PendenciaVM[];
 }) {
-  const [alunos, setAlunos] = useState<AlunoHoje[]>(initial);
+  const [alunos, setAlunos] = useState<AlunoHojeVM[]>(initial);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  // Quem era esperado hoje — só para o hint "hoje" no sheet (segunda aula).
-  const esperadosIds = initial.map((a) => a.id);
+  const esperadosIds = initial.filter((a) => !a.avulso).map((a) => a.id);
 
-  const toggleFalta = (id: string) =>
-    setAlunos((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, status: a.status === "faltou" ? "presumido" : "faltou" }
-          : a,
-      ),
+  // Otimista: aplica na hora, persiste por trás; se falhar, desfaz e avisa.
+  function persistir(acao: () => Promise<void>, desfazer: () => void) {
+    setErro(null);
+    startTransition(async () => {
+      try {
+        await acao();
+      } catch (e) {
+        desfazer();
+        setErro(e instanceof Error ? e.message : "Não salvou — tente de novo.");
+      }
+    });
+  }
+
+  const toggleFalta = (id: string) => {
+    const atual = alunos.find((a) => a.id === id);
+    if (!atual) return;
+    const marcar = !atual.faltou;
+    const flip = (v: boolean) =>
+      setAlunos((prev) => prev.map((a) => (a.id === id ? { ...a, faltou: v } : a)));
+    flip(marcar);
+    persistir(
+      () => (marcar ? marcarFalta(id, hojeIso) : desmarcarFalta(id, hojeIso)),
+      () => flip(!marcar),
     );
+  };
 
   const addExtra = (rosterId: string) => {
+    setSheetOpen(false);
+    const existente = alunos.find((a) => a.id === rosterId);
+    const desfazer = () =>
+      setAlunos((prev) =>
+        existente
+          ? prev.map((a) =>
+              a.id === rosterId ? { ...a, extras: a.extras - 1 } : a,
+            )
+          : prev.filter((a) => a.id !== rosterId),
+      );
     setAlunos((prev) => {
-      // Já está na lista (esperado ou avulso já adicionado): soma no card.
       if (prev.some((a) => a.id === rosterId)) {
         return prev.map((a) =>
           a.id === rosterId ? { ...a, extras: a.extras + 1 } : a,
         );
       }
-      // Fora do dia: entra como card avulso com badge "+1 extra".
-      const r = todosAlunos.find((x) => x.id === rosterId);
+      const r = roster.find((x) => x.id === rosterId);
       if (!r) return prev;
       return [
         ...prev,
-        {
-          id: r.id,
-          nome: r.nome,
-          horario: "",
-          status: "presumido",
-          extras: 1,
-          avulso: true,
-        },
+        { id: r.id, nome: r.nome, horario: "", faltou: false, extras: 1, avulso: true },
       ];
     });
-    setSheetOpen(false);
+    persistir(() => adicionarExtra(rosterId, hojeIso), desfazer);
   };
 
-  // Estado vazio com voz humana (§4.1)
-  if (alunos.length === 0) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center px-8 py-24 text-center">
-        <p className="font-display text-2xl leading-snug text-text">
-          Sem alunos hoje.
-          <br />
-          Bom descanso 👊
-        </p>
-      </div>
+  const tirarExtra = (id: string) => {
+    const atual = alunos.find((a) => a.id === id);
+    if (!atual || atual.extras === 0) return;
+    const eraAvulsoComUm = atual.avulso && atual.extras === 1;
+    setAlunos((prev) =>
+      eraAvulsoComUm
+        ? prev.filter((a) => a.id !== id)
+        : prev.map((a) => (a.id === id ? { ...a, extras: a.extras - 1 } : a)),
     );
-  }
+    persistir(
+      () => removerExtra(id, hojeIso),
+      () =>
+        setAlunos((prev) =>
+          eraAvulsoComUm
+            ? [...prev, atual]
+            : prev.map((a) => (a.id === id ? { ...a, extras: a.extras + 1 } : a)),
+        ),
+    );
+  };
 
-  // Classifica por horário relativo a "agora". Lista já vem ordenada por horário;
-  // avulsos (sem horário) ficam ao fim e contam como não-passados.
   const itens = alunos.map((aluno) => {
     const minutes = toMinutes(aluno.horario);
     return { aluno, minutes, isPast: minutes !== null && minutes < nowMinutes };
   });
-  // Divisor "agora" entra antes do primeiro não-passado.
   const divisorIdx = itens.findIndex((i) => !i.isPast);
-  // "Próximo" destacado = primeiro não-passado com horário.
   const proximoIdx = itens.findIndex((i) => !i.isPast && i.minutes !== null);
 
   return (
     <>
-      <section className="flex flex-col gap-3 px-5">
-        {itens.map((item, i) => (
-          <Fragment key={item.aluno.id}>
-            {i === divisorIdx && (
-              <div className="flex items-center gap-3 py-1" aria-hidden="true">
-                <span className="size-1.5 rounded-full bg-accent" />
-                <span className="text-xs font-medium uppercase tracking-wider text-accent">
-                  agora
-                </span>
-                <span className="h-px flex-1 bg-accent/20" />
-              </div>
-            )}
-            <CheckinCard
-              aluno={item.aluno}
-              isPast={item.isPast}
-              isNext={i === proximoIdx}
-              onToggleFalta={toggleFalta}
-            />
-          </Fragment>
-        ))}
+      {pendencias.length > 0 && <Pendencias pendencias={pendencias} />}
 
-        {/* Único caminho para extras: abre o sheet com todo o roster. */}
+      {erro && (
+        <p className="mx-5 mb-3 rounded-2xl bg-danger/10 px-4 py-2.5 text-sm text-danger">
+          {erro}
+        </p>
+      )}
+
+      {alunos.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center px-8 py-24 text-center">
+          <p className="font-display text-2xl leading-snug text-text">
+            Sem alunos hoje.
+            <br />
+            Bom descanso 👊
+          </p>
+        </div>
+      ) : (
+        <section className="flex flex-col gap-3 px-5">
+          {itens.map((item, i) => (
+            <Fragment key={item.aluno.id}>
+              {i === divisorIdx && (
+                <div className="flex items-center gap-3 py-1" aria-hidden="true">
+                  <span className="size-1.5 rounded-full bg-accent" />
+                  <span className="text-xs font-medium uppercase tracking-wider text-accent">
+                    agora
+                  </span>
+                  <span className="h-px flex-1 bg-accent/20" />
+                </div>
+              )}
+              <CheckinCard
+                aluno={item.aluno}
+                isPast={item.isPast}
+                isNext={i === proximoIdx}
+                onToggleFalta={toggleFalta}
+                onTirarExtra={tirarExtra}
+              />
+            </Fragment>
+          ))}
+        </section>
+      )}
+
+      <section className="px-5 pt-3">
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="mt-1 flex items-center justify-center gap-2 rounded-[20px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent transition-colors active:bg-accent-soft/40"
+          className="flex w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent transition-colors active:bg-accent-soft/40"
         >
           <Plus size={18} strokeWidth={2.4} />
           aula extra
@@ -121,7 +175,7 @@ export function CheckinList({
 
       <ExtraSheet
         open={sheetOpen}
-        roster={todosAlunos}
+        roster={roster}
         esperadosIds={esperadosIds}
         onPick={addExtra}
         onClose={() => setSheetOpen(false)}

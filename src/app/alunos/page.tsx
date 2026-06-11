@@ -1,8 +1,17 @@
-export default function AlunosPage() {
+import { createClient } from "@/lib/supabase/server";
+import { AlunosLista } from "@/components/AlunosLista";
+
+export default async function AlunosPage() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("alunos")
+    .select("id, nome, valor_mensal, modo_cobranca, dias_semana, status")
+    .order("nome");
+
   return (
-    <div className="px-5 pt-12">
+    <div className="flex flex-1 flex-col px-5 pt-12">
       <h1 className="font-display text-[2.5rem] leading-[1.05] text-text">Alunos</h1>
-      <p className="mt-2 text-sm text-text-muted">Em breve.</p>
+      <AlunosLista alunos={data ?? []} />
     </div>
   );
 }

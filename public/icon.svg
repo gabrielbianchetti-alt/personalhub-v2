@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícone PWA: o orbe-gradiente, assinatura visual do app (§6.4). -->
+  <defs>
+    <radialGradient id="orbe" cx="50%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#F79A3C"/>
+      <stop offset="55%" stop-color="#F26B3A"/>
+      <stop offset="100%" stop-color="#E04E2A"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#FAF6F1"/>
+  <circle cx="256" cy="244" r="150" fill="url(#orbe)"/>
+  <circle cx="256" cy="244" r="150" fill="none" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="6"/>
+  <rect x="148" y="404" width="216" height="22" rx="11" fill="#1F1B16" fill-opacity="0.85"/>
+</svg>

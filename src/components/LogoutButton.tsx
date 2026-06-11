@@ -4,8 +4,7 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// Logout simples. Por ora fica como ícone discreto no header de Hoje;
-// na v2 mora atrás do avatar/engrenagem (§4.4).
+// Logout — mora nas Configurações (§4.4).
 export function LogoutButton() {
   const router = useRouter();
 
@@ -20,10 +19,10 @@ export function LogoutButton() {
     <button
       type="button"
       onClick={sair}
-      aria-label="Sair"
-      className="flex size-9 items-center justify-center rounded-full bg-surface/70 text-text-muted shadow-soft backdrop-blur-sm transition-colors active:text-text"
+      className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-soft px-3.5 py-2 text-sm font-medium text-text-muted transition-colors active:text-danger"
     >
-      <LogOut size={16} strokeWidth={2.2} />
+      <LogOut size={15} strokeWidth={2.2} />
+      Sair
     </button>
   );
 }

@@ -18,3 +18,11 @@ Veja também [`AGENTS.md`](./AGENTS.md) — esta versão do Next.js tem breaking
   - Mais de uma cor de destaque competindo na mesma tela.
 
 Regra de negócio em aberto (default §5): em `mensalidade`, falta **não** desconta valor; desmarcação com reposição é neutra. Configurável por professor só em v2.x.
+
+## Invariantes do código (não quebrar)
+
+- **Fonte única da contagem é `src/lib/aulas.ts`** (Hoje, Cobrança e actions consomem dela; ninguém conta por fora). Testes em `tests/` rodam com `npm test` (Node 24, type stripping nativo — por isso os imports internos da lib usam extensão `.ts`).
+- **Fechamento `aberto` é sempre derivado ao vivo; o snapshot só congela ao virar `enviado`/`pago`** (recomputado no servidor em `actions/cobranca.ts`). Nunca preencher snapshot na criação.
+- **Todo conceito de "hoje" passa por `agoraSP()`** (`src/lib/datas.ts`, fuso América/São_Paulo). `new Date()` cru no servidor é bug (Vercel roda em UTC).
+- **Saldo de créditos é derivado** (`saldoCreditos`): total do pacote mais recente − aulas realizadas desde a compra. Não há job de débito.
+- Migrações em `supabase/migrations/`, rodadas manualmente no SQL Editor (ordem numérica). `scripts/verify-schema.cjs` valida schema+RLS com uma conta de teste.

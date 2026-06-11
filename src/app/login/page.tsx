@@ -31,6 +31,23 @@ export default function LoginPage() {
     irProApp();
   }
 
+  async function esqueciSenha() {
+    setErro(null);
+    setAviso(null);
+    if (!email) {
+      setErro("Preencha o email primeiro.");
+      return;
+    }
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/atualizar-senha`,
+    });
+    setLoading(false);
+    if (error) return setErro(error.message);
+    setAviso("Enviamos um link para redefinir a senha. Olha o email.");
+  }
+
   async function criar() {
     setErro(null);
     setAviso(null);
@@ -98,6 +115,14 @@ export default function LoginPage() {
             className="rounded-2xl py-3 text-sm font-medium text-text-muted transition-colors active:bg-surface-soft disabled:opacity-60"
           >
             Criar conta
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={esqueciSenha}
+            className="py-1 text-sm text-text-muted underline-offset-4 transition-colors active:text-text disabled:opacity-60"
+          >
+            Esqueci a senha
           </button>
         </form>
       </div>

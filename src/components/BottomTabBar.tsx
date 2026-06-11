@@ -16,11 +16,19 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
+// Badge no ícone Cobrança nos últimos 3 dias do mês — o lembrete de fechar.
+// Relógio do aparelho: o professor está no fuso dele.
+function fimDeMes(): boolean {
+  const agora = new Date();
+  const ultimo = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+  return agora.getDate() >= ultimo - 2;
+}
+
 export function BottomTabBar() {
   const pathname = usePathname();
 
-  // Login não faz parte da navegação do app.
-  if (pathname === "/login") return null;
+  // Login e redefinição de senha não fazem parte da navegação do app.
+  if (pathname === "/login" || pathname === "/atualizar-senha") return null;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50">
@@ -37,7 +45,15 @@ export function BottomTabBar() {
                   active ? "text-accent" : "text-text-muted"
                 }`}
               >
-                <Icon size={22} strokeWidth={active ? 2.4 : 2} />
+                <span className="relative">
+                  <Icon size={22} strokeWidth={active ? 2.4 : 2} />
+                  {href === "/cobranca" && fimDeMes() && (
+                    <span
+                      aria-label="Fechamentos do mês prontos"
+                      className="absolute -right-1 -top-0.5 size-2 rounded-full bg-accent"
+                    />
+                  )}
+                </span>
                 <span className={active ? "font-medium" : ""}>{label}</span>
               </Link>
             );

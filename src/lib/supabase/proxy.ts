@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Rotas públicas (não exigem sessão).
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/atualizar-senha"];
 
 // Renova a sessão a cada request e protege as rotas do app.
 // Padrão @supabase/ssr para App Router (adaptado a proxy.ts / Next 16).
