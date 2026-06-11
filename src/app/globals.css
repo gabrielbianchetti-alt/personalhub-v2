@@ -13,7 +13,7 @@
   --success:       #2E9E6B;
   --warning:       #E2A33C;
   --danger:        #D9534F;
-  --glass-bg:      rgba(255, 255, 255, 0.65);
+  --glass-bg:      rgba(255, 255, 255, 0.78);
   --glass-border:  rgba(255, 255, 255, 0.4);
   /* Elevação: sombra de tinta no claro; vira contorno sutil no escuro
      (sombra escura some sobre fundo escuro). */
@@ -32,7 +32,7 @@
   --success:       #4BB587;
   --warning:       #EBB45C;
   --danger:        #E5736F;
-  --glass-bg:      rgba(20, 32, 42, 0.6);
+  --glass-bg:      rgba(20, 32, 42, 0.86);
   --glass-border:  rgba(255, 255, 255, 0.08);
   --sombra:        0 0 0 1px rgba(255, 255, 255, 0.06);
 }
@@ -64,11 +64,12 @@ body {
   font-family: var(--font-display), ui-serif, Georgia, serif;
 }
 
-/* Glass cirúrgico — §6.4 (só na tab bar nesta sessão) */
+/* Glass cirúrgico — §6.4 (tab bar, sheets, resumo da Cobrança).
+   Só a propriedade padrão: com o par prefixado junto, o Lightning CSS
+   descartava a declaração inteira e o glass ficava sem desfoque. */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 /* ── Camadas de ambiente ─────────────────────────────────────────────

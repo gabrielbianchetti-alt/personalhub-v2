@@ -37,21 +37,25 @@ export function Sheet({
       className={`fixed inset-0 z-[60] ${open ? "" : "pointer-events-none"}`}
       aria-hidden={!open}
     >
+      {/* Backdrop escurece E desfoca o que ficou atrás — nada de
+          informação da página se misturando com o conteúdo do sheet. */}
       <button
         type="button"
         aria-label="Fechar"
         tabIndex={open ? 0 : -1}
         onClick={onClose}
-        className={`absolute inset-0 bg-black/30 transition-opacity duration-200 ${
+        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${
           open ? "opacity-100" : "opacity-0"
         }`}
       />
+      {/* Aberto fica SEM transform: ancestral com transform desliga o
+          backdrop-filter do glass no Chromium (o blur parava de agir). */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
         className={`absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px] transition-transform duration-300 ease-out ${
-          open ? "translate-y-0" : "translate-y-full"
+          open ? "" : "translate-y-full"
         }`}
       >
         <div className="glass rounded-t-3xl border-t border-glass-border px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-soft">
