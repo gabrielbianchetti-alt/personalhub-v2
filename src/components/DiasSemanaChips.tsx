@@ -41,7 +41,7 @@ export function DiasSemanaChips({
             onClick={() => toggle(d)}
             className={`${dim} rounded-full font-medium transition-colors ${
               ativo
-                ? "bg-accent text-white"
+                ? "bg-accent text-accent-contrast"
                 : "bg-surface-soft text-text-muted active:bg-accent-soft"
             }`}
           >

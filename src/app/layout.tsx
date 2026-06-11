@@ -1,12 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 import { BottomTabBar } from "@/components/BottomTabBar";
 
-// Display serifada com personalidade (§6.3) — números-hero, datas grandes.
-const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-display" });
-// Sans limpa e neutra (§6.3) — texto/UI.
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+// Identidade CARIMBO (§6.3): grotesk com opinião nos títulos…
+const schibsted = Schibsted_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
+// …sans funcional no corpo…
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
+// …e MONO em todo valor R$ — o tique de fintech que vira assinatura.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "PersonalHub",
@@ -21,8 +34,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAF6F1" },
-    { media: "(prefers-color-scheme: dark)", color: "#14202A" },
+    { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
   ],
 };
 
@@ -36,7 +49,7 @@ export default function RootLayout({
     // suppressHydrationWarning: o script de tema muda data-theme antes do React.
     <html
       lang="pt-BR"
-      className={`${fraunces.variable} ${inter.variable}`}
+      className={`${schibsted.variable} ${plexSans.variable} ${plexMono.variable}`}
       suppressHydrationWarning
     >
       <head>

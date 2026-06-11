@@ -33,7 +33,7 @@ export function BottomTabBar() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50">
       <div className="mx-auto w-full max-w-[430px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="glass flex items-stretch justify-around rounded-3xl border border-glass-border px-2 py-2 shadow-soft">
+        <div className="glass flex items-stretch justify-around rounded-2xl border border-glass-border px-2 py-2 shadow-soft">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (

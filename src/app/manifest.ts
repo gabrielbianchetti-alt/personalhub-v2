@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Organização como subproduto de gestos preguiçosos.",
     start_url: "/",
     display: "standalone",
-    background_color: "#FAF6F1",
-    theme_color: "#FAF6F1",
+    background_color: "#F6F7F9",
+    theme_color: "#F6F7F9",
     icons: [
       {
         src: "/icon.svg",

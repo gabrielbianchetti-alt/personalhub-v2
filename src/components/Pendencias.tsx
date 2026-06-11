@@ -46,7 +46,7 @@ export function Pendencias({ pendencias }: { pendencias: PendenciaVM[] }) {
     });
 
   return (
-    <section className="mx-5 mb-4 rounded-[20px] bg-surface-soft p-4">
+    <section className="mx-5 mb-4 rounded-[14px] bg-surface-soft p-4">
       <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
         Dias anteriores{fila.length > 1 ? ` · ${fila.length}` : ""}
       </p>
@@ -107,7 +107,7 @@ export function Pendencias({ pendencias }: { pendencias: PendenciaVM[] }) {
             onClick={() =>
               resolver(() => resolverDiaComFaltas(atual.dataIso, [...faltosos]))
             }
-            className="mt-3 w-full rounded-full bg-accent py-2.5 text-sm font-medium text-white active:opacity-90 disabled:opacity-60"
+            className="mt-3 w-full rounded-full bg-accent py-2.5 text-sm font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
           >
             Salvar
           </button>

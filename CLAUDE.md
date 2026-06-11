@@ -9,7 +9,7 @@ Veja também [`AGENTS.md`](./AGENTS.md) — esta versão do Next.js tem breaking
 - **Três telas, só.** Hoje · Alunos · Cobrança (§4). Se algo não cabe numa delas, provavelmente não pertence à v2. Configurações ficam atrás de avatar/engrenagem, fora da navegação.
 - **A exceção é registrada; a regra é presumida** (§2.2). Aula acontecer é o normal e não se registra. `registros_aula` guarda **só exceções** (falta/extra/desmarcada); presença é derivada. Quem não registra nada não é punido — o fechamento sai correto pela config semanal.
 - **Cobrança é o core; gestão é subproduto** (§2.3). Nenhum fluxo pode atrapalhar cadastro → fechamento → WhatsApp.
-- **Tokens do §6.2 são a fonte da verdade visual.** Use as CSS variables (`--bg`, `--accent` coral `#F26B3A`, etc.), claro e escuro nascendo dos mesmos tokens. Não introduzir cores fora da paleta.
+- **Tokens do §6.2 são a fonte da verdade visual** (identidade CARIMBO: papel frio + tinta grafite + teal `#0B7A66`/`#35D0AE`). Claro e escuro nascem dos mesmos tokens; não introduzir cores fora da paleta. Botões de accent usam `text-accent-contrast` (no dark o teal claro exige texto escuro). TODO valor R$ usa `.font-money` (IBM Plex Mono, tabular, centavos sempre). Proibido: creme, coral, Fraunces/serifa (era a cara do Claude — redesign de 11/jun/2026).
 - **Anti-padrões do §6.5 são proibidos:**
   - Verde pintando dados ou saudações (verde só para sucesso/confirmação).
   - Tabelas densas estilo planilha / tudo-caixa-com-borda.

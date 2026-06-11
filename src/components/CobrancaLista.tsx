@@ -41,8 +41,6 @@ import { Sheet } from "./Sheet";
 
 type SheetState = { tipo: "cobrar" | "ajuste" | "pacote"; alunoId: string } | null;
 
-const STATUS_ROTULO = { aberto: "aberto", enviado: "enviada", pago: "paga" } as const;
-
 /** Dias desde o envio — alimenta o "enviada · 3d" e o tom do follow-up. */
 function diasDesde(enviadoEm: string | null): number {
   if (!enviadoEm) return 0;
@@ -174,7 +172,7 @@ export function CobrancaLista({
         </p>
         <Link
           href="/alunos/novo"
-          className="mt-6 rounded-full bg-accent px-6 py-3 font-medium text-white shadow-soft active:opacity-90"
+          className="mt-6 rounded-full bg-accent px-6 py-3 font-medium text-accent-contrast shadow-soft active:opacity-90"
         >
           Cadastrar alunos
         </Link>
@@ -186,20 +184,20 @@ export function CobrancaLista({
     <>
       {festa && (
         <div className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center">
-          <p className="glass rounded-3xl border border-glass-border px-8 py-5 font-display text-2xl text-text shadow-soft">
+          <p className="glass rounded-2xl border border-glass-border px-8 py-5 font-display text-2xl text-text shadow-soft">
             Mês fechado 👊
           </p>
         </div>
       )}
 
       {/* Card flutuante de resumo — 3º lugar sancionado de glass (§6.4). */}
-      <div className="glass sticky top-3 z-40 mt-4 rounded-[20px] border border-glass-border px-4 py-3 shadow-soft">
+      <div className="glass sticky top-3 z-40 mt-4 rounded-[14px] border border-glass-border px-4 py-3 shadow-soft">
         <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
               Previsto no mês
             </p>
-            <p className="font-display text-3xl leading-tight text-text tabular-nums">
+            <p className="font-money text-[26px] font-semibold leading-tight text-text">
               {formatBRL(resumo.totalPrevisto)}
             </p>
           </div>
@@ -223,7 +221,7 @@ export function CobrancaLista({
           <button
             type="button"
             onClick={iniciarFechamentoGuiado}
-            className="mt-2.5 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-accent py-2.5 text-sm font-medium text-white active:opacity-90"
+            className="mt-2.5 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-accent py-2.5 text-sm font-medium text-accent-contrast active:opacity-90"
           >
             Fechar o mês · {resumo.abertos} {resumo.abertos === 1 ? "aberta" : "abertas"}
             <ChevronRight size={16} strokeWidth={2.4} />
@@ -244,10 +242,10 @@ export function CobrancaLista({
           return (
             <li
               key={item.alunoId}
-              className="relative rounded-[20px] bg-surface p-4 shadow-soft"
+              className="relative rounded-[14px] bg-surface p-4 shadow-soft"
             >
               {celebrando === item.alunoId && (
-                <div className="celebra pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[20px] bg-surface/80">
+                <div className="celebra pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[14px] bg-surface/80">
                   <p className="font-display text-xl text-success">Cobrança enviada ✓</p>
                 </div>
               )}
@@ -264,36 +262,34 @@ export function CobrancaLista({
                     </p>
                   )}
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-display text-2xl leading-tight text-text tabular-nums min-[390px]:text-[1.75rem]">
+                <div className="flex shrink-0 flex-col items-end">
+                  <p className="font-money text-xl font-semibold leading-tight text-text min-[390px]:text-[22px]">
                     {item.modo === "creditos" && item.ultimoPacote === null
                       ? "—"
                       : formatBRL(item.valor)}
                   </p>
                   {item.valorAula !== null && (
-                    <p className="text-xs text-text-muted">
+                    <p className="font-money text-[11px] text-text-muted">
                       {formatBRL(item.valorAula)}/aula
                     </p>
                   )}
-                  {item.modo !== "creditos" && item.status !== "aberto" && (
+                  {item.modo !== "creditos" && item.status === "pago" && (
+                    <span className="selo mt-1 text-success">Pago</span>
+                  )}
+                  {item.modo !== "creditos" && item.status === "enviado" && (
                     <span
                       className={`text-xs font-medium ${
-                        item.status === "pago"
-                          ? "text-success"
-                          : esquecida
-                            ? "text-warning"
-                            : "text-accent"
+                        esquecida ? "text-warning" : "text-accent"
                       }`}
                     >
-                      {STATUS_ROTULO[item.status]}
-                      {item.status === "pago" && " ✓"}
-                      {item.status === "enviado" && dias >= 1 && ` · ${dias}d`}
+                      enviada{dias >= 1 && ` · ${dias}d`}
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center gap-2">
+              {/* divisor pontilhado de recibo entre o extrato e as ações */}
+              <div className="divisor-recibo mt-3 flex items-center gap-2 pt-3">
                 {item.modo !== "creditos" ? (
                   <>
                     {item.status !== "pago" && (
@@ -308,7 +304,7 @@ export function CobrancaLista({
                         className={`min-w-0 flex-1 whitespace-nowrap rounded-full py-2.5 text-sm font-medium active:opacity-90 ${
                           item.status === "enviado" && !esquecida
                             ? "bg-accent-soft text-accent"
-                            : "bg-accent text-white"
+                            : "bg-accent text-accent-contrast"
                         }`}
                       >
                         {item.status === "enviado" ? (
@@ -355,7 +351,7 @@ export function CobrancaLista({
                     onClick={() => setSheet({ tipo: "pacote", alunoId: item.alunoId })}
                     className={`flex-1 whitespace-nowrap rounded-full py-2.5 text-sm font-medium active:opacity-90 ${
                       item.saldo !== null && item.saldo <= 2
-                        ? "bg-accent text-white"
+                        ? "bg-accent text-accent-contrast"
                         : "bg-surface-soft text-text"
                     }`}
                   >
@@ -501,7 +497,7 @@ function CobrarSheet({
                 }
               });
             }}
-            className="mt-3 w-full rounded-2xl bg-accent py-3 font-medium text-white active:opacity-90 disabled:opacity-60"
+            className="mt-3 w-full rounded-2xl bg-accent py-3 font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
           >
             {pending ? "Salvando…" : "Salvar e continuar"}
           </button>
@@ -532,7 +528,7 @@ function CobrarSheet({
           <button
             type="button"
             onClick={() => onEnviar(item, waLink(telefoneOk, mensagem))}
-            className="mt-3 w-full rounded-2xl bg-accent py-3.5 font-medium text-white active:opacity-90"
+            className="mt-3 w-full rounded-2xl bg-accent py-3.5 font-medium text-accent-contrast active:opacity-90"
           >
             Abrir WhatsApp
           </button>
@@ -610,7 +606,7 @@ function AjusteSheet({
         >
           <Minus size={20} />
         </button>
-        <p className="w-20 text-center font-display text-4xl text-text tabular-nums">
+        <p className="font-money w-20 text-center text-3xl font-semibold text-text">
           {ajuste > 0 ? `+${ajuste}` : ajuste}
         </p>
         <button
@@ -643,7 +639,7 @@ function AjusteSheet({
             }
           });
         }}
-        className="mt-3 w-full rounded-2xl bg-accent py-3 font-medium text-white active:opacity-90 disabled:opacity-60"
+        className="mt-3 w-full rounded-2xl bg-accent py-3 font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
       >
         {pending ? "Salvando…" : "Salvar ajuste"}
       </button>
@@ -713,7 +709,7 @@ function PacoteSheet({
           >
             <Minus size={16} />
           </button>
-          <p className="font-display text-2xl text-text tabular-nums">{qtd}</p>
+          <p className="font-money text-xl font-semibold text-text">{qtd}</p>
           <button
             type="button"
             aria-label="Mais aulas"
@@ -739,7 +735,7 @@ function PacoteSheet({
         type="button"
         disabled={pending}
         onClick={() => vender(true)}
-        className="mt-4 w-full rounded-2xl bg-accent py-3.5 font-medium text-white active:opacity-90 disabled:opacity-60"
+        className="mt-4 w-full rounded-2xl bg-accent py-3.5 font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
       >
         {pending ? "Salvando…" : "Vender e cobrar no WhatsApp"}
       </button>

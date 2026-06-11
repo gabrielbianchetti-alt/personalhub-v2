@@ -22,7 +22,7 @@ export function CheckinCard({
 
   return (
     <article
-      className={`flex items-center justify-between rounded-[20px] bg-surface p-4 shadow-soft transition-all duration-200 ${
+      className={`flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft transition-all duration-200 ${
         aluno.faltou ? "opacity-60" : "opacity-100"
       } ${isNext ? "ring-1 ring-accent/50" : ""} ${aluno.avulso ? "card-in" : ""}`}
     >

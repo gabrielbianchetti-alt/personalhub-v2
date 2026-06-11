@@ -169,7 +169,7 @@ export function CheckinList({
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent transition-colors active:bg-accent-soft/40"
+          className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent transition-colors active:bg-accent-soft/40"
         >
           <Plus size={18} strokeWidth={2.4} />
           aula extra

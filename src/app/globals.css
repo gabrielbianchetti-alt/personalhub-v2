@@ -1,40 +1,43 @@
 @import "tailwindcss";
 
-/* ── Tokens §6.2 ───────────────────────────────────────────────── */
+/* ── Tokens §6.2 — identidade CARIMBO ─────────────────────────────
+   Papel frio + tinta grafite + teal-petróleo; a seriedade de um recibo
+   bem emitido. Nada de creme/coral/serifa (lia "feito pelo Claude"). */
 /* Modo claro: padrão de lançamento. */
 :root {
-  --bg:            #FAF6F1;
-  --surface:       #FFFFFF;
-  --surface-soft:  #F3EDE6;
-  --text:          #1F1B16;
-  --text-muted:    #8A8178;
-  --accent:        #F26B3A;
-  --accent-soft:   #FBD9CB;
-  --success:       #2E9E6B;
-  --warning:       #E2A33C;
-  --danger:        #D9534F;
-  --glass-bg:      rgba(255, 255, 255, 0.78);
-  --glass-border:  rgba(255, 255, 255, 0.4);
-  /* Elevação: sombra de tinta no claro; vira contorno sutil no escuro
-     (sombra escura some sobre fundo escuro). */
-  --sombra:        0 8px 30px -8px rgba(31, 27, 22, 0.12);
+  --bg:              #F6F7F9; /* branco-gelo frio — nunca creme */
+  --surface:         #FFFFFF;
+  --surface-soft:    #ECEFF3;
+  --text:            #0E1013; /* tinta grafite */
+  --text-muted:      #5A6472;
+  --accent:          #0B7A66; /* teal-petróleo — faixa livre no BR */
+  --accent-soft:     #DDF1EB;
+  --accent-contrast: #FFFFFF; /* texto sobre fills de accent */
+  --success:         #1B8A4B;
+  --warning:         #9E5408;
+  --danger:          #C7363D;
+  --glass-bg:        rgba(255, 255, 255, 0.82); /* papel fosco */
+  --glass-border:    rgba(14, 16, 19, 0.08);    /* hairline de tinta */
+  /* Elevação por hairline + microssombra — nunca sombra difusa grande. */
+  --sombra:          0 0 0 1px rgba(14, 16, 19, 0.06), 0 1px 2px rgba(14, 16, 19, 0.05);
 }
 
-/* Modo escuro: nasce dos mesmos tokens. Feedback recalibrado p/ contraste. */
+/* Modo escuro: grafite azulado frio, mesmos tokens. */
 [data-theme="dark"] {
-  --bg:            #14202A;
-  --surface:       #1C2B37;
-  --surface-soft:  #243542;
-  --text:          #F2EDE7;
-  --text-muted:    #93A1AC;
-  --accent:        #F58A5C;
-  --accent-soft:   #2E3B45;
-  --success:       #4BB587;
-  --warning:       #EBB45C;
-  --danger:        #E5736F;
-  --glass-bg:      rgba(20, 32, 42, 0.86);
-  --glass-border:  rgba(255, 255, 255, 0.08);
-  --sombra:        0 0 0 1px rgba(255, 255, 255, 0.06);
+  --bg:              #0E1116;
+  --surface:         #151A21;
+  --surface-soft:    #1D242E;
+  --text:            #EDF1F5;
+  --text-muted:      #8B95A3;
+  --accent:          #35D0AE;
+  --accent-soft:     #10322B;
+  --accent-contrast: #0B1612; /* teal claro exige texto escuro (WCAG) */
+  --success:         #3ECF7A;
+  --warning:         #E8A23D;
+  --danger:          #EF5A61;
+  --glass-bg:        rgba(14, 17, 22, 0.84);
+  --glass-border:    rgba(255, 255, 255, 0.08);
+  --sombra:          0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
 /* Expõe os tokens como utilitários Tailwind v4. */
@@ -46,11 +49,12 @@
   --color-text-muted:   var(--text-muted);
   --color-accent:       var(--accent);
   --color-accent-soft:  var(--accent-soft);
-  --color-success:      var(--success);
-  --color-warning:      var(--warning);
-  --color-danger:       var(--danger);
-  --color-glass-border: var(--glass-border);
-  --shadow-soft:        var(--sombra);
+  --color-success:         var(--success);
+  --color-warning:         var(--warning);
+  --color-danger:          var(--danger);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-glass-border:    var(--glass-border);
+  --shadow-soft:           var(--sombra);
 }
 
 body {
@@ -59,9 +63,41 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Display serifada (números-hero, datas) — §6.3 */
+/* Display grotesk pesada (títulos, datas) — §6.3 (Schibsted Grotesk) */
 .font-display {
-  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Dinheiro em mono (assinatura CARIMBO): todo valor R$ usa esta classe.
+   Tabular + centavos sempre — colunas de extrato alinham perfeitas. */
+.font-money {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.03em;
+}
+
+/* Selo de carimbo — "PAGO" estampado no card quitado e no recibo. */
+.selo {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transform: rotate(-6deg);
+  opacity: 0.9;
+  /* tinta de carimbo: leve falha de impressão */
+  mask-image: radial-gradient(circle at 30% 60%, black 92%, rgba(0,0,0,0.55) 100%);
+}
+
+/* Divisor pontilhado de recibo (entre o resumo e as ações do card). */
+.divisor-recibo {
+  border-top: 1px dashed color-mix(in srgb, var(--text) 16%, transparent);
 }
 
 /* Glass cirúrgico — §6.4 (tab bar, sheets, resumo da Cobrança).
@@ -94,18 +130,19 @@ body {
   filter: blur(80px);
   opacity: 0.5;
 }
-/* Paradas intermediárias suavizam o degradê (menos banding no escuro). */
+/* Paradas intermediárias suavizam o degradê (menos banding no escuro).
+   Família do teal-petróleo: manhã clara, tarde funda, noite azulada. */
 .orbe--manha {
-  background: radial-gradient(closest-side, #F79A3C 0%, rgba(247, 154, 60, 0.45) 45%, rgba(247, 154, 60, 0) 78%);
+  background: radial-gradient(closest-side, #2FB39A 0%, rgba(47, 179, 154, 0.4) 45%, rgba(47, 179, 154, 0) 78%);
 }
 .orbe--tarde {
-  background: radial-gradient(closest-side, #F26B3A 0%, rgba(242, 107, 58, 0.45) 45%, rgba(242, 107, 58, 0) 78%);
+  background: radial-gradient(closest-side, #0B7A66 0%, rgba(11, 122, 102, 0.4) 45%, rgba(11, 122, 102, 0) 78%);
 }
 .orbe--noite {
-  background: radial-gradient(closest-side, #5B7A99 0%, rgba(91, 122, 153, 0.4) 45%, rgba(91, 122, 153, 0) 78%);
+  background: radial-gradient(closest-side, #34557A 0%, rgba(52, 85, 122, 0.4) 45%, rgba(52, 85, 122, 0) 78%);
 }
 [data-theme="dark"] .orbe {
-  opacity: 0.38;
+  opacity: 0.32;
 }
 
 /* Aura: respiração sutil das outras telas — parente discreto do orbe,
@@ -120,7 +157,7 @@ body {
   border-radius: 9999px;
   filter: blur(90px);
   opacity: 0.3;
-  background: radial-gradient(closest-side, var(--accent) 0%, rgba(242, 107, 58, 0.3) 45%, transparent 78%);
+  background: radial-gradient(closest-side, var(--accent) 0%, rgba(11, 122, 102, 0.28) 45%, transparent 78%);
 }
 [data-theme="dark"] .aura {
   opacity: 0.16;

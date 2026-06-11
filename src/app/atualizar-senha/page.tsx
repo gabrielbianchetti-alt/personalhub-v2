@@ -73,7 +73,7 @@ export default function AtualizarSenhaPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 rounded-2xl bg-accent py-3 font-medium text-white transition-opacity active:opacity-90 disabled:opacity-60"
+            className="mt-1 rounded-2xl bg-accent py-3 font-medium text-accent-contrast transition-opacity active:opacity-90 disabled:opacity-60"
           >
             {loading ? "..." : "Salvar nova senha"}
           </button>

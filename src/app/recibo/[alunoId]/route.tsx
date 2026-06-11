@@ -77,13 +77,13 @@ export async function GET(
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          backgroundColor: "#FAF6F1",
+          backgroundColor: "#F6F7F9",
           padding: 96,
           position: "relative",
           fontFamily: "sans-serif",
         }}
       >
-        {/* orbe decorativo — degradê suave, sem blur (satori não filtra) */}
+        {/* respiro teal no topo — degradê suave, sem blur (satori não filtra) */}
         <div
           style={{
             position: "absolute",
@@ -93,7 +93,7 @@ export async function GET(
             height: 600,
             borderRadius: 9999,
             background:
-              "radial-gradient(circle, rgba(242,107,58,0.5) 0%, rgba(242,107,58,0.18) 45%, rgba(242,107,58,0) 75%)",
+              "radial-gradient(circle, rgba(11,122,102,0.32) 0%, rgba(11,122,102,0.12) 45%, rgba(11,122,102,0) 75%)",
           }}
         />
 
@@ -110,7 +110,7 @@ export async function GET(
               alignItems: "center",
               gap: 16,
               fontSize: 34,
-              color: "#1F1B16",
+              color: "#0E1013",
               fontWeight: 700,
             }}
           >
@@ -118,9 +118,9 @@ export async function GET(
               style={{
                 width: 26,
                 height: 26,
-                borderRadius: 9999,
-                background:
-                  "radial-gradient(circle, #F79A3C 0%, #F26B3A 70%)",
+                borderRadius: 8,
+                border: "5px solid #0B7A66",
+                transform: "rotate(-6deg)",
               }}
             />
             PersonalHub
@@ -128,7 +128,7 @@ export async function GET(
           <div
             style={{
               fontSize: 30,
-              color: "#8A8178",
+              color: "#5A6472",
               textTransform: "uppercase",
               letterSpacing: 4,
             }}
@@ -139,39 +139,41 @@ export async function GET(
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 48, color: "#8A8178" }}>{aluno.nome}</div>
+          <div style={{ fontSize: 48, color: "#5A6472" }}>{aluno.nome}</div>
           <div
             style={{
-              fontSize: 148,
+              fontSize: 142,
               fontWeight: 700,
-              color: "#1F1B16",
+              color: "#0E1013",
               letterSpacing: -4,
             }}
           >
             {formatBRL(item.valor)}
           </div>
-          <div style={{ fontSize: 40, color: "#8A8178" }}>{item.resumo}</div>
+          <div style={{ fontSize: 40, color: "#5A6472" }}>{item.resumo}</div>
           {item.valorAula !== null && (
-            <div style={{ fontSize: 32, color: "#8A8178" }}>
+            <div style={{ fontSize: 32, color: "#5A6472" }}>
               {`${formatBRL(item.valorAula)} por aula`}
             </div>
           )}
-          <div style={{ display: "flex", marginTop: 28 }}>
+          {/* selo de carimbo — a assinatura da identidade */}
+          <div style={{ display: "flex", marginTop: 32 }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                padding: "14px 36px",
-                borderRadius: 9999,
-                fontSize: 34,
+                padding: "12px 30px",
+                borderRadius: 14,
+                border: pago ? "5px solid #1B8A4B" : "5px solid #0B7A66",
+                transform: "rotate(-6deg)",
+                fontSize: 32,
                 fontWeight: 700,
-                color: pago ? "#2E9E6B" : "#F26B3A",
-                backgroundColor: pago
-                  ? "rgba(46,158,107,0.12)"
-                  : "rgba(242,107,58,0.12)",
+                letterSpacing: 8,
+                textTransform: "uppercase",
+                color: pago ? "#1B8A4B" : "#0B7A66",
               }}
             >
-              {pago ? "Pago ✓" : `Fechamento de ${nomeMes(month)}`}
+              {pago ? "PAGO" : `FECHAMENTO · ${nomeMes(month).toUpperCase()}`}
             </div>
           </div>
         </div>
@@ -181,14 +183,14 @@ export async function GET(
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            borderTop: "2px solid rgba(31,27,22,0.08)",
+            borderTop: "3px dashed rgba(14,16,19,0.18)",
             paddingTop: 40,
           }}
         >
-          <div style={{ fontSize: 34, color: "#1F1B16", fontWeight: 700 }}>
+          <div style={{ fontSize: 34, color: "#0E1013", fontWeight: 700 }}>
             {professor}
           </div>
-          <div style={{ fontSize: 28, color: "#8A8178" }}>
+          <div style={{ fontSize: 28, color: "#5A6472" }}>
             feito no PersonalHub
           </div>
         </div>

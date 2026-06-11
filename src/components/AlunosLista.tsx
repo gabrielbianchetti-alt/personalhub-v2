@@ -51,7 +51,7 @@ export function AlunosLista({ alunos }: { alunos: AlunoListaItem[] }) {
         <Link
           href="/alunos/novo"
           aria-label="Cadastrar alunos"
-          className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-white shadow-soft active:opacity-90"
+          className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-contrast shadow-soft active:opacity-90"
         >
           <Plus size={22} strokeWidth={2.4} />
         </Link>
@@ -92,7 +92,7 @@ export function AlunosLista({ alunos }: { alunos: AlunoListaItem[] }) {
           {alunos.length === 0 && (
             <Link
               href="/alunos/novo"
-              className="mt-6 rounded-full bg-accent px-6 py-3 font-medium text-white shadow-soft active:opacity-90"
+              className="mt-6 rounded-full bg-accent px-6 py-3 font-medium text-accent-contrast shadow-soft active:opacity-90"
             >
               Cadastrar alunos
             </Link>
@@ -104,7 +104,7 @@ export function AlunosLista({ alunos }: { alunos: AlunoListaItem[] }) {
             <li key={a.id}>
               <Link
                 href={`/alunos/${a.id}`}
-                className="flex items-center justify-between rounded-[20px] bg-surface p-4 shadow-soft active:opacity-80"
+                className="flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft active:opacity-80"
               >
                 <div className="min-w-0">
                   <p className="truncate text-base font-medium text-text">{a.nome}</p>
@@ -113,7 +113,7 @@ export function AlunosLista({ alunos }: { alunos: AlunoListaItem[] }) {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-display text-lg text-text tabular-nums">
+                  <p className="font-money text-[15px] font-semibold text-text">
                     {formatBRL(Number(a.valor_mensal ?? 0))}
                   </p>
                   <p className="text-xs text-text-muted">

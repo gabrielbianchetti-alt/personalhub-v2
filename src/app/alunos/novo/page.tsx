@@ -70,7 +70,7 @@ export default function NovoAlunosPage() {
 
       <div className="mt-5 flex flex-col gap-4">
         {linhas.map((l, i) => (
-          <div key={i} className="rounded-[20px] bg-surface p-4 shadow-soft">
+          <div key={i} className="rounded-[14px] bg-surface p-4 shadow-soft">
             <div className="flex items-center gap-2">
               <input
                 value={l.nome}
@@ -145,7 +145,7 @@ export default function NovoAlunosPage() {
       <button
         type="button"
         onClick={() => setLinhas((prev) => [...prev, linhaVazia()])}
-        className="mt-4 flex items-center justify-center gap-2 rounded-[20px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent active:bg-accent-soft/40"
+        className="mt-4 flex items-center justify-center gap-2 rounded-[14px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent active:bg-accent-soft/40"
       >
         <Plus size={18} strokeWidth={2.4} />
         mais um aluno
@@ -157,7 +157,7 @@ export default function NovoAlunosPage() {
         type="button"
         disabled={pending}
         onClick={salvar}
-        className="mt-5 rounded-2xl bg-accent py-3.5 font-medium text-white shadow-soft active:opacity-90 disabled:opacity-60"
+        className="mt-5 rounded-2xl bg-accent py-3.5 font-medium text-accent-contrast shadow-soft active:opacity-90 disabled:opacity-60"
       >
         {pending
           ? "Salvando…"

@@ -112,7 +112,7 @@ export function AlunoPerfil({
       )}
 
       {saldo !== null && (
-        <div className="mt-4 rounded-[20px] bg-surface p-4 shadow-soft">
+        <div className="mt-4 rounded-[14px] bg-surface p-4 shadow-soft">
           <p className="text-sm text-text-muted">Saldo do pacote</p>
           <p className="font-display text-4xl text-text tabular-nums">
             {saldo} {saldo === 1 || saldo === -1 ? "aula" : "aulas"}
@@ -125,7 +125,7 @@ export function AlunoPerfil({
         </div>
       )}
 
-      <div className="mt-4 flex flex-col gap-3 rounded-[20px] bg-surface p-4 shadow-soft">
+      <div className="mt-4 flex flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-soft">
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
             Nome
@@ -217,7 +217,7 @@ export function AlunoPerfil({
       <button
         type="button"
         onClick={() => setDetalhesAbertos((v) => !v)}
-        className="mt-3 flex items-center justify-between rounded-[20px] bg-surface px-4 py-3.5 text-sm font-medium text-text shadow-soft"
+        className="mt-3 flex items-center justify-between rounded-[14px] bg-surface px-4 py-3.5 text-sm font-medium text-text shadow-soft"
       >
         Mais detalhes
         <ChevronDown
@@ -226,7 +226,7 @@ export function AlunoPerfil({
         />
       </button>
       {detalhesAbertos && (
-        <div className="mt-2 flex flex-col gap-3 rounded-[20px] bg-surface p-4 shadow-soft">
+        <div className="mt-2 flex flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-soft">
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
               Observações
@@ -259,7 +259,7 @@ export function AlunoPerfil({
         type="button"
         disabled={pending}
         onClick={salvar}
-        className="mt-4 rounded-2xl bg-accent py-3.5 font-medium text-white shadow-soft active:opacity-90 disabled:opacity-60"
+        className="mt-4 rounded-2xl bg-accent py-3.5 font-medium text-accent-contrast shadow-soft active:opacity-90 disabled:opacity-60"
       >
         {pending ? "Salvando…" : "Salvar"}
       </button>

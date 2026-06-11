@@ -21,7 +21,7 @@ function aplicarTema(tema: Tema) {
   // Status bar do PWA acompanha o tema forçado, não só o do sistema.
   document
     .querySelectorAll('meta[name="theme-color"]')
-    .forEach((m) => m.setAttribute("content", dark ? "#14202A" : "#FAF6F1"));
+    .forEach((m) => m.setAttribute("content", dark ? "#0E1116" : "#F6F7F9"));
 }
 
 export function ConfigClient({
@@ -86,7 +86,7 @@ export function ConfigClient({
         <h1 className="font-display text-3xl text-text">Configurações</h1>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 rounded-[20px] bg-surface p-4 shadow-soft">
+      <div className="mt-5 flex flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-soft">
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
             Seu nome
@@ -165,13 +165,13 @@ export function ConfigClient({
               }
             });
           }}
-          className="rounded-2xl bg-accent py-3 font-medium text-white active:opacity-90 disabled:opacity-60"
+          className="rounded-2xl bg-accent py-3 font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
         >
           {pending ? "Salvando…" : "Salvar"}
         </button>
       </div>
 
-      <div className="mt-3 rounded-[20px] bg-surface p-4 shadow-soft">
+      <div className="mt-3 rounded-[14px] bg-surface p-4 shadow-soft">
         <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
           Tema
         </p>
@@ -197,7 +197,7 @@ export function ConfigClient({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between rounded-[20px] bg-surface p-4 shadow-soft">
+      <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
             Conta

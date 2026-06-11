@@ -58,7 +58,7 @@ export function Sheet({
           open ? "" : "translate-y-full"
         }`}
       >
-        <div className="glass rounded-t-3xl border-t border-glass-border px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-soft">
+        <div className="glass rounded-t-2xl border-t border-glass-border px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-soft">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-text-muted/30" />
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-2xl text-text">{title}</h2>

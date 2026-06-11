@@ -148,46 +148,51 @@ valor_final  = mensalidade: valor_mensal (faltas afetam contagem, não valor, sa
 
 ## 6. Identidade visual
 
-### 6.1 Conceito
-**"Soft warm + editorial."** Superfícies suaves e quentes, tipografia display gigante para números, uma cor de ação quente, muito respiro. Glass usado de forma **cirúrgica** como camada de elevação — nunca como tema total (legibilidade sob sol de academia e performance em celular médio são restrições reais).
+### 6.1 Conceito — identidade **CARIMBO** *(redesign 11/jun/2026; a v1 desta spec era "soft warm + serifa", abandonada por ler "feito pelo Claude" — o creme+Fraunces é o preset documentado da Anthropic)*
+**"Recibo bem emitido."** Papel frio, tinta grafite, teal-petróleo e o carimbo de PAGO — credibilidade financeira com charme de papelaria brasileira (refs: N26, neutros da Cora, extrato Nubank, Cash App no número-herói). Glass usado de forma **cirúrgica** como camada de elevação — nunca como tema total.
 
 ### 6.2 Tokens (CSS variables, Tailwind v4)
 
 **Modo claro (padrão de lançamento):**
 ```
---bg:            #FAF6F1   /* off-white quente, não branco hospitalar */
---surface:       #FFFFFF
---surface-soft:  #F3EDE6
---text:          #1F1B16
---text-muted:    #8A8178
---accent:        #F26B3A   /* coral/laranja — ação, destaque, orbe */
---accent-soft:   #FBD9CB
---success:       #2E9E6B   /* verde só para sucesso/confirmação */
---warning:       #E2A33C
---danger:        #D9534F
---glass:         rgba(255,255,255,.65) + backdrop-blur(20px)
+--bg:              #F6F7F9   /* branco-gelo FRIO — nunca creme */
+--surface:         #FFFFFF
+--surface-soft:    #ECEFF3
+--text:            #0E1013   /* tinta grafite */
+--text-muted:      #5A6472
+--accent:          #0B7A66   /* teal-petróleo — faixa livre no BR */
+--accent-soft:     #DDF1EB
+--accent-contrast: #FFFFFF   /* texto sobre fills de accent */
+--success:         #1B8A4B
+--warning:         #9E5408
+--danger:          #C7363D
+--glass:           rgba(255,255,255,.82) + blur(20px)  /* papel fosco */
 ```
 
 **Modo escuro (nasce junto, dos mesmos tokens):**
 ```
---bg:            #14202A   /* azul-petróleo profundo, não preto puro */
---surface:       #1C2B37
---surface-soft:  #243542
---text:          #F2EDE7
---text-muted:    #93A1AC
---accent:        #F58A5C
---glass:         rgba(20,32,42,.6) + backdrop-blur(20px)
+--bg:              #0E1116   /* grafite azulado frio */
+--surface:         #151A21
+--surface-soft:    #1D242E
+--text:            #EDF1F5
+--text-muted:      #8B95A3
+--accent:          #35D0AE
+--accent-contrast: #0B1612   /* teal claro exige texto ESCURO nos botões */
+--glass:           rgba(14,17,22,.84) + blur(20px)
 ```
 
 ### 6.3 Tipografia
-- **Display (números-hero, datas grandes):** serifada/geométrica com personalidade — candidatas: *Fraunces*, *Instrument Serif*, *Gambetta*. Uso: valor do fechamento, contagem de aulas, data no header de Hoje. Números tabulares onde houver alinhamento.
-- **Texto/UI:** sans limpa e neutra — candidatas: *Inter*, *Geist*, *General Sans*.
-- Contraste de registros (display vs sans) é o que mata a cara de planilha. Definir as duas fontes na primeira sessão visual e congelar.
+- **Display (títulos, datas):** *Schibsted Grotesk* 700-800, tracking apertado — grotesk com opinião, fora do radar de template.
+- **Texto/UI:** *IBM Plex Sans*.
+- **Dinheiro (assinatura):** TODO valor R$ em *IBM Plex Mono* via classe `.font-money` (tabular nativo, centavos sempre) — mono no dinheiro é tique de fintech que nenhum template usa.
+- Proibido: Fraunces/serifas editoriais (preset do Claude), Inter puro (default de IA).
 
 ### 6.4 Elementos de assinatura
-- **Orbe-gradiente:** radial-gradient difuso (accent → transparente, blur alto) no header de Hoje. Varia com o período: manhã (laranja quente) · tarde (coral) · noite (tons frios sobre dark). Implementação barata, identidade forte.
-- **Glass em exatamente 3 lugares:** bottom tab bar · sheets/modais de confirmação · card flutuante de resumo na Cobrança. Todo o resto: superfícies sólidas com elevação suave (shadow difusa, raio generoso ~20px).
-- **Microinterações:** resolver card no check-in (transição + háptico), celebração discreta no "cobrança enviada".
+- **Selo de carimbo (`.selo`):** "PAGO" rotacionado −6° estampado no card quitado e no recibo compartilhável. É O gesto da marca.
+- **Divisor pontilhado de recibo (`.divisor-recibo`):** entre o extrato e as ações dos cards de cobrança.
+- **Orbe ambiente:** mantido no Hoje em família teal (manhã clara → tarde funda → noite azulada), camada de página inteira, nunca clipado.
+- **Glass em exatamente 3 lugares:** bottom tab bar · sheets · card de resumo da Cobrança. Elevação por hairline + microssombra; raio 14px em cards (fintech), 999px só em pills/avatar.
+- **Microinterações:** háptico no check-in, celebração discreta no "cobrança enviada".
 - **Voz dos textos:** humana e direta, em PT-BR. "Tudo certo por hoje 👊" > "Nenhum registro pendente".
 
 ### 6.5 Anti-padrões (proibidos)
