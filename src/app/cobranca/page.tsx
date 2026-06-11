@@ -4,7 +4,7 @@ import { agoraSP, mesRefIso, nomeMes } from "@/lib/datas";
 import { saldoCreditos } from "@/lib/aulas";
 import {
   montaItemCreditos,
-  montaItemMensalidade,
+  montaItemFechamento,
   resumoMes,
   type CobrancaItemVM,
 } from "@/lib/cobranca";
@@ -34,9 +34,10 @@ export default async function CobrancaPage() {
 
   const itens: CobrancaItemVM[] = [];
   for (const aluno of ativos) {
-    if (aluno.modo_cobranca === "mensalidade") {
+    if (aluno.modo_cobranca !== "creditos") {
+      // mensalidade e por_aula fecham mês igual; muda só a fórmula do valor.
       itens.push(
-        montaItemMensalidade(
+        montaItemFechamento(
           aluno,
           registros.filter((r) => r.aluno_id === aluno.id),
           fechamentos.get(aluno.id) ?? null,

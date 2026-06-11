@@ -66,9 +66,16 @@ export async function criarAlunosEmLote(linhas: LinhaLote[]) {
   });
 
   const { error } = await supabase.from("alunos").insert(rows);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(traduzErroModo(error.message));
   revalidatePath("/alunos");
   revalidatePath("/");
+}
+
+// O valor 'por_aula' do enum vem da migração 0005 — erro claro se faltar.
+function traduzErroModo(message: string): string {
+  return message.includes("invalid input value for enum")
+    ? "Banco desatualizado: rode a migração 0005 no SQL Editor para usar o modo Por aula."
+    : message;
 }
 
 export async function atualizarAluno(id: string, campos: CamposAluno) {
@@ -92,7 +99,7 @@ export async function atualizarAluno(id: string, campos: CamposAluno) {
       },
     })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(traduzErroModo(error.message));
   revalidatePath("/alunos");
   revalidatePath(`/alunos/${id}`);
   revalidatePath("/");

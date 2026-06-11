@@ -6,7 +6,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buscaRegistros } from "@/lib/supabase/registros";
-import { agregaExcecoes, contagemMes, valorMensalidade } from "@/lib/aulas";
+import { agregaExcecoes, contagemMes, valorFechamento } from "@/lib/aulas";
 import { diasNoMes, isoDe, parteIso } from "@/lib/datas";
 
 const MES_RE = /^\d{4}-\d{2}-01$/;
@@ -34,7 +34,7 @@ async function snapshotMensalidade(
   const [alunoRes, registros, fechamentoRes] = await Promise.all([
     supabase
       .from("alunos")
-      .select("dias_semana, valor_mensal")
+      .select("dias_semana, valor_mensal, modo_cobranca")
       .eq("id", alunoId)
       .single(),
     buscaRegistros(supabase, { alunoId, de: mesRef, ate: fimMes }),
@@ -51,6 +51,8 @@ async function snapshotMensalidade(
   const motivo = ajusteOverride?.motivo ?? fechamentoRes.data?.ajuste_motivo ?? null;
   const excecoes = agregaExcecoes(registros);
   const contagem = contagemMes(alunoRes.data.dias_semana, year, month, excecoes, ajuste);
+  const modo =
+    alunoRes.data.modo_cobranca === "por_aula" ? "por_aula" : "mensalidade";
 
   return {
     professor_id: professorId,
@@ -61,7 +63,7 @@ async function snapshotMensalidade(
     extras: excecoes.extras,
     ajuste_manual: ajuste,
     ajuste_motivo: motivo,
-    valor_final: valorMensalidade(alunoRes.data.valor_mensal),
+    valor_final: valorFechamento(modo, alunoRes.data.valor_mensal, contagem.realizadas),
   };
 }
 

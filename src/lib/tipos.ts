@@ -1,6 +1,8 @@
 // Tipos de domínio espelhando o schema (§5 da SPEC).
 
-export type ModoCobranca = "mensalidade" | "creditos";
+// mensalidade: valor fixo/mês · por_aula: valor da aula × realizadas ·
+// creditos: pacote pré-pago que debita por aula feita.
+export type ModoCobranca = "mensalidade" | "por_aula" | "creditos";
 export type AlunoStatus = "ativo" | "suspenso";
 export type RegistroTipo = "falta" | "extra" | "desmarcada";
 export type RegistroOrigem = "checkin" | "retroativo" | "ajuste";

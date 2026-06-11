@@ -22,10 +22,14 @@ export function DiasSemanaChips({
   const toggle = (d: number) =>
     onChange(value.includes(d) ? value.filter((x) => x !== d) : [...value, d]);
 
-  const dim = size === "md" ? "size-9 text-sm" : "size-7 text-xs";
+  // 7 chips numa linha até em 320px: 7×32 + 6×4 = 248px (largura útil exata).
+  const dim =
+    size === "md"
+      ? "size-8 text-xs min-[375px]:size-9 min-[375px]:text-sm"
+      : "size-7 text-xs";
 
   return (
-    <div className="flex gap-1.5">
+    <div className="flex flex-wrap gap-1 min-[375px]:gap-1.5">
       {ORDEM.map((d) => {
         const ativo = value.includes(d);
         return (

@@ -18,6 +18,10 @@ function aplicarTema(tema: Tema) {
     (tema === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   if (dark) document.documentElement.dataset.theme = "dark";
   else delete document.documentElement.dataset.theme;
+  // Status bar do PWA acompanha o tema forçado, não só o do sistema.
+  document
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((m) => m.setAttribute("content", dark ? "#14202A" : "#FAF6F1"));
 }
 
 export function ConfigClient({
@@ -42,6 +46,13 @@ export function ConfigClient({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTema(t);
   }, []);
+
+  // "Salvo ✓" some sozinho.
+  useEffect(() => {
+    if (!salvo) return;
+    const t = setTimeout(() => setSalvo(false), 2000);
+    return () => clearTimeout(t);
+  }, [salvo]);
 
   const mudaTema = (t: Tema) => {
     setTema(t);

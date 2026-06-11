@@ -1,10 +1,13 @@
 "use client";
 
-import { X } from "lucide-react";
-import type { RosterVM } from "@/lib/hoje";
+// Único caminho para registrar aula extra; lista o roster com busca
+// quando a turma cresce. Usa o Sheet glass compartilhado (Esc + scroll lock).
 
-// Bottom sheet glass (§6.4 — sheets são local sancionado de glass).
-// Único caminho para registrar aula extra; lista todo o roster.
+import { useState } from "react";
+import { Search } from "lucide-react";
+import type { RosterVM } from "@/lib/hoje";
+import { Sheet } from "./Sheet";
+
 export function ExtraSheet({
   open,
   roster,
@@ -18,66 +21,49 @@ export function ExtraSheet({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const [busca, setBusca] = useState("");
+  const visiveis = busca.trim()
+    ? roster.filter((r) =>
+        r.nome.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR").trim()),
+      )
+    : roster;
+
   return (
-    <div
-      className={`fixed inset-0 z-[60] ${open ? "" : "pointer-events-none"}`}
-      aria-hidden={!open}
-    >
-      {/* backdrop */}
-      <button
-        type="button"
-        aria-label="Fechar"
-        tabIndex={open ? 0 : -1}
-        onClick={onClose}
-        className={`absolute inset-0 bg-black/30 transition-opacity duration-200 ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
-      />
-
-      {/* painel */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Adicionar aula extra"
-        className={`absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px] transition-transform duration-300 ease-out ${
-          open ? "translate-y-0" : "translate-y-full"
-        }`}
-      >
-        <div className="glass rounded-t-3xl border-t border-white/40 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-soft">
-          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-text-muted/30" />
-
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-2xl text-text">Aula extra</h2>
+    <Sheet open={open} title="Aula extra" onClose={onClose}>
+      {roster.length > 12 && (
+        <div className="mb-2 flex items-center gap-2 rounded-2xl bg-surface px-3.5 py-2.5 shadow-soft">
+          <Search size={16} className="shrink-0 text-text-muted" />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar aluno"
+            tabIndex={open ? 0 : -1}
+            className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
+          />
+        </div>
+      )}
+      <ul className="flex max-h-[55vh] flex-col gap-0.5 overflow-y-auto pb-1">
+        {visiveis.map((r) => (
+          <li key={r.id}>
             <button
               type="button"
-              aria-label="Fechar"
               tabIndex={open ? 0 : -1}
-              onClick={onClose}
-              className="flex size-9 items-center justify-center rounded-full bg-surface-soft text-text-muted"
+              onClick={() => onPick(r.id)}
+              className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition-colors active:bg-surface-soft"
             >
-              <X size={18} strokeWidth={2.4} />
+              <span className="min-w-0 truncate text-base text-text">{r.nome}</span>
+              {esperadosIds.includes(r.id) && (
+                <span className="shrink-0 pl-2 text-xs text-text-muted">hoje</span>
+              )}
             </button>
-          </div>
-
-          <ul className="flex max-h-[55vh] flex-col gap-0.5 overflow-y-auto pb-1">
-            {roster.map((r) => (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  tabIndex={open ? 0 : -1}
-                  onClick={() => onPick(r.id)}
-                  className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition-colors active:bg-surface-soft"
-                >
-                  <span className="text-base text-text">{r.nome}</span>
-                  {esperadosIds.includes(r.id) && (
-                    <span className="text-xs text-text-muted">hoje</span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
+          </li>
+        ))}
+        {visiveis.length === 0 && (
+          <li className="px-3 py-6 text-center text-sm text-text-muted">
+            Ninguém com esse nome.
+          </li>
+        )}
+      </ul>
+    </Sheet>
   );
 }

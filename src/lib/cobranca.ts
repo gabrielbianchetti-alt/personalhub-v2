@@ -6,7 +6,7 @@ import {
   agregaExcecoes,
   contagemMes,
   resumoContagem,
-  valorMensalidade,
+  valorFechamento,
   type ExcecoesMes,
 } from "./aulas.ts";
 import type {
@@ -20,26 +20,33 @@ export interface CobrancaItemVM {
   alunoId: string;
   nome: string;
   telefone: string | null;
-  modo: "mensalidade" | "creditos";
+  modo: "mensalidade" | "por_aula" | "creditos";
   status: FechamentoStatus;
-  /** valor a cobrar (mensalidade) ou do último pacote (créditos) */
+  /** valor a cobrar (mensalidade/por_aula) ou do último pacote (créditos) */
   valor: number;
   resumo: string;
   realizadas: number;
   ajuste: number;
   ajusteMotivo: string | null;
+  /** só por_aula — legenda "R$ X/aula" sob o valor-herói */
+  valorAula: number | null;
   /** só créditos */
   saldo: number | null;
   ultimoPacote: { qtd: number; valor: number } | null;
 }
 
-export function montaItemMensalidade(
-  aluno: Pick<Aluno, "id" | "nome" | "telefone" | "valor_mensal" | "dias_semana">,
+/** Mensalidade e por_aula fecham mês igual; muda só a fórmula do valor. */
+export function montaItemFechamento(
+  aluno: Pick<
+    Aluno,
+    "id" | "nome" | "telefone" | "valor_mensal" | "dias_semana" | "modo_cobranca"
+  >,
   registrosDoMes: Pick<RegistroAula, "tipo" | "quantidade">[],
   fechamento: Fechamento | null,
   year: number,
   month0: number,
 ): CobrancaItemVM {
+  const modo = aluno.modo_cobranca === "por_aula" ? "por_aula" : "mensalidade";
   const status = fechamento?.status ?? "aberto";
   const ajuste = fechamento?.ajuste_manual ?? 0;
 
@@ -50,7 +57,7 @@ export function montaItemMensalidade(
     // Derivado ao vivo: correções de hoje entram na hora.
     excecoes = agregaExcecoes(registrosDoMes);
     contagem = contagemMes(aluno.dias_semana, year, month0, excecoes, ajuste);
-    valor = valorMensalidade(aluno.valor_mensal);
+    valor = valorFechamento(modo, aluno.valor_mensal, contagem.realizadas);
   } else {
     // Congelado no envio: o que foi cobrado não muda sozinho depois.
     excecoes = {
@@ -72,13 +79,14 @@ export function montaItemMensalidade(
     alunoId: aluno.id,
     nome: aluno.nome,
     telefone: aluno.telefone,
-    modo: "mensalidade",
+    modo,
     status,
     valor,
     resumo: resumoContagem(contagem, excecoes, ajuste),
     realizadas: contagem.realizadas,
     ajuste,
     ajusteMotivo: fechamento?.ajuste_motivo ?? null,
+    valorAula: modo === "por_aula" ? Number(aluno.valor_mensal ?? 0) : null,
     saldo: null,
     ultimoPacote: null,
   };
@@ -103,6 +111,7 @@ export function montaItemCreditos(
     realizadas: 0,
     ajuste: 0,
     ajusteMotivo: null,
+    valorAula: null,
     saldo,
     ultimoPacote,
   };
@@ -116,11 +125,12 @@ export interface ResumoMesVM {
 }
 
 export function resumoMes(itens: CobrancaItemVM[]): ResumoMesVM {
-  const mensais = itens.filter((i) => i.modo === "mensalidade");
+  // Créditos fica fora do total: a receita dele é a venda de pacote.
+  const fecham = itens.filter((i) => i.modo !== "creditos");
   return {
-    totalPrevisto: mensais.reduce((s, i) => s + i.valor, 0),
-    abertos: mensais.filter((i) => i.status === "aberto").length,
-    enviados: mensais.filter((i) => i.status === "enviado").length,
-    pagos: mensais.filter((i) => i.status === "pago").length,
+    totalPrevisto: fecham.reduce((s, i) => s + i.valor, 0),
+    abertos: fecham.filter((i) => i.status === "aberto").length,
+    enviados: fecham.filter((i) => i.status === "enviado").length,
+    pagos: fecham.filter((i) => i.status === "pago").length,
   };
 }

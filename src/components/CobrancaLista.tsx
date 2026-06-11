@@ -4,7 +4,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check, Minus, Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { vibra } from "@/lib/haptico";
 import type { CobrancaItemVM, ResumoMesVM } from "@/lib/cobranca";
 import { formatBRL } from "@/lib/datas";
 import {
@@ -73,6 +75,7 @@ export function CobrancaLista({
   const aoEnviar = (item: CobrancaItemVM, link: string) => {
     window.open(link, "_blank", "noopener");
     setSheet(null);
+    vibra(15);
     const statusAnterior = item.status;
     setStatus(item.alunoId, "enviado");
     setCelebrando(item.alunoId);
@@ -84,6 +87,7 @@ export function CobrancaLista({
   };
 
   const aoPagar = (item: CobrancaItemVM) => {
+    vibra();
     const statusAnterior = item.status;
     setStatus(item.alunoId, "pago");
     persistir(
@@ -109,6 +113,12 @@ export function CobrancaLista({
           <br />
           fechamentos nascem sozinhos 👊
         </p>
+        <Link
+          href="/alunos/novo"
+          className="mt-6 rounded-full bg-accent px-6 py-3 font-medium text-white shadow-soft active:opacity-90"
+        >
+          Cadastrar alunos
+        </Link>
       </div>
     );
   }
@@ -116,24 +126,30 @@ export function CobrancaLista({
   return (
     <>
       {/* Card flutuante de resumo — 3º lugar sancionado de glass (§6.4). */}
-      <div className="glass sticky top-3 z-40 mt-4 rounded-[20px] border border-white/40 px-4 py-3 shadow-soft">
-        <div className="flex items-end justify-between">
+      <div className="glass sticky top-3 z-40 mt-4 rounded-[20px] border border-glass-border px-4 py-3 shadow-soft">
+        <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
               Previsto no mês
             </p>
-            <p className="font-display text-3xl leading-tight text-text">
+            <p className="font-display text-3xl leading-tight text-text tabular-nums">
               {formatBRL(resumo.totalPrevisto)}
             </p>
           </div>
           <p className="pb-1 text-right text-xs leading-relaxed text-text-muted">
             {resumo.pagos > 0 && (
-              <span className="font-medium text-success">{resumo.pagos} pagas</span>
+              <span className="whitespace-nowrap font-medium text-success">
+                {resumo.pagos} pagas
+              </span>
             )}
             {resumo.pagos > 0 && (resumo.enviados > 0 || resumo.abertos > 0) && " · "}
-            {resumo.enviados > 0 && `${resumo.enviados} enviadas`}
+            {resumo.enviados > 0 && (
+              <span className="whitespace-nowrap">{resumo.enviados} enviadas</span>
+            )}
             {resumo.enviados > 0 && resumo.abertos > 0 && " · "}
-            {resumo.abertos > 0 && `${resumo.abertos} abertas`}
+            {resumo.abertos > 0 && (
+              <span className="whitespace-nowrap">{resumo.abertos} abertas</span>
+            )}
           </p>
         </div>
       </div>
@@ -159,18 +175,27 @@ export function CobrancaLista({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-base font-medium text-text">{item.nome}</p>
-                <p className="mt-0.5 text-sm text-text-muted">{item.resumo}</p>
+                <p className="mt-0.5 truncate text-sm text-text-muted" title={item.resumo}>
+                  {item.resumo}
+                </p>
                 {item.ajusteMotivo && (
-                  <p className="mt-0.5 text-xs text-text-muted">“{item.ajusteMotivo}”</p>
+                  <p className="mt-0.5 truncate text-xs text-text-muted">
+                    “{item.ajusteMotivo}”
+                  </p>
                 )}
               </div>
               <div className="shrink-0 text-right">
-                <p className="font-display text-[1.75rem] leading-tight text-text">
+                <p className="font-display text-2xl leading-tight text-text tabular-nums min-[390px]:text-[1.75rem]">
                   {item.modo === "creditos" && item.ultimoPacote === null
                     ? "—"
                     : formatBRL(item.valor)}
                 </p>
-                {item.modo === "mensalidade" && item.status !== "aberto" && (
+                {item.valorAula !== null && (
+                  <p className="text-xs text-text-muted">
+                    {formatBRL(item.valorAula)}/aula
+                  </p>
+                )}
+                {item.modo !== "creditos" && item.status !== "aberto" && (
                   <span
                     className={`text-xs font-medium ${
                       item.status === "pago" ? "text-success" : "text-accent"
@@ -184,15 +209,23 @@ export function CobrancaLista({
             </div>
 
             <div className="mt-3 flex items-center gap-2">
-              {item.modo === "mensalidade" ? (
+              {item.modo !== "creditos" ? (
                 <>
                   {item.status !== "pago" && (
                     <button
                       type="button"
+                      aria-label={
+                        item.status === "enviado" ? "Cobrar de novo" : "Cobrar no WhatsApp"
+                      }
                       onClick={() => setSheet({ tipo: "cobrar", item })}
-                      className="flex-1 rounded-full bg-accent py-2.5 text-sm font-medium text-white active:opacity-90"
+                      className="min-w-0 flex-1 whitespace-nowrap rounded-full bg-accent py-2.5 text-sm font-medium text-white active:opacity-90"
                     >
-                      {item.status === "enviado" ? "Cobrar de novo" : "Cobrar no WhatsApp"}
+                      {item.status === "enviado" ? "Cobrar de novo" : (
+                        <>
+                          Cobrar
+                          <span className="hidden min-[390px]:inline"> no WhatsApp</span>
+                        </>
+                      )}
                     </button>
                   )}
                   {item.status !== "pago" ? (
@@ -359,8 +392,11 @@ function CobrarSheet({
             </p>
           </div>
           <p className="mt-2 text-xs text-text-muted">
-            Abre a conversa no WhatsApp com a mensagem pronta. Edite o modelo em
-            Configurações.
+            Abre a conversa no WhatsApp com a mensagem pronta. Edite o modelo nas{" "}
+            <Link href="/config" className="underline underline-offset-2">
+              Configurações
+            </Link>
+            .
           </p>
           <button
             type="button"
@@ -397,6 +433,8 @@ function AjusteSheet({
       <p className="text-sm text-text-muted">
         Soma ou tira aulas do fechamento de {primeiroNome(item.nome)}. Fica salvo
         e aparece no resumo.
+        {item.modo === "por_aula" &&
+          " Como a cobrança é por aula, o ajuste muda o valor final."}
       </p>
       <div className="mt-4 flex items-center justify-center gap-5">
         <button
@@ -407,7 +445,7 @@ function AjusteSheet({
         >
           <Minus size={20} />
         </button>
-        <p className="w-20 text-center font-display text-4xl text-text">
+        <p className="w-20 text-center font-display text-4xl text-text tabular-nums">
           {ajuste > 0 ? `+${ajuste}` : ajuste}
         </p>
         <button
@@ -506,28 +544,28 @@ function PacoteSheet({
             type="button"
             aria-label="Menos aulas"
             onClick={() => setQtd((q) => Math.max(1, q - 1))}
-            className="flex size-9 items-center justify-center rounded-full bg-surface-soft text-text"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-text"
           >
             <Minus size={16} />
           </button>
-          <p className="font-display text-2xl text-text">{qtd}</p>
+          <p className="font-display text-2xl text-text tabular-nums">{qtd}</p>
           <button
             type="button"
             aria-label="Mais aulas"
             onClick={() => setQtd((q) => q + 1)}
-            className="flex size-9 items-center justify-center rounded-full bg-surface-soft text-text"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-text"
           >
             <Plus size={16} />
           </button>
         </div>
-        <div className="flex flex-1 items-center gap-1 rounded-2xl bg-surface px-4 py-3.5 shadow-soft">
+        <div className="flex min-w-0 flex-1 items-center gap-1 rounded-2xl bg-surface px-4 py-3.5 shadow-soft">
           <span className="text-sm text-text-muted">R$</span>
           <input
             value={valor}
             onChange={(e) => setValor(e.target.value)}
             placeholder="600"
             inputMode="decimal"
-            className="w-full bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
+            className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
           />
         </div>
       </div>

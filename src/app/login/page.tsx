@@ -83,6 +83,7 @@ export default function LoginPage() {
             type="email"
             autoComplete="email"
             required
+            aria-label="Email"
             placeholder="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -92,6 +93,7 @@ export default function LoginPage() {
             type="password"
             autoComplete="current-password"
             required
+            aria-label="Senha"
             placeholder="senha"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
@@ -106,7 +108,7 @@ export default function LoginPage() {
             disabled={loading}
             className="mt-1 rounded-2xl bg-accent py-3 font-medium text-white transition-opacity active:opacity-90 disabled:opacity-60"
           >
-            {loading ? "..." : "Entrar"}
+            {loading ? "Entrando…" : "Entrar"}
           </button>
           <button
             type="button"

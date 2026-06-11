@@ -3,7 +3,7 @@
 // Perfil do aluno (§4.2): os 4 dados + telefone, opcionais colapsados em
 // "Mais detalhes", suspender como ação — sem aba dedicada.
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ChevronDown, Pause, Play } from "lucide-react";
@@ -50,6 +50,13 @@ export function AlunoPerfil({
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  // "Salvo ✓" some sozinho — confirmação, não estado permanente.
+  useEffect(() => {
+    if (!salvo) return;
+    const t = setTimeout(() => setSalvo(false), 2000);
+    return () => clearTimeout(t);
+  }, [salvo]);
 
   const muda = (patch: Partial<CamposAluno>) => {
     setSalvo(false);
@@ -107,7 +114,7 @@ export function AlunoPerfil({
       {saldo !== null && (
         <div className="mt-4 rounded-[20px] bg-surface p-4 shadow-soft">
           <p className="text-sm text-text-muted">Saldo do pacote</p>
-          <p className="font-display text-4xl text-text">
+          <p className="font-display text-4xl text-text tabular-nums">
             {saldo} {saldo === 1 || saldo === -1 ? "aula" : "aulas"}
           </p>
           {saldo <= 2 && (
@@ -131,9 +138,9 @@ export function AlunoPerfil({
         </label>
 
         <div className="flex items-center gap-2">
-          <label className="flex flex-1 flex-col gap-1">
+          <label className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-              Valor
+              Valor{campos.modo === "por_aula" ? " da aula" : ""}
             </span>
             <div className="flex items-center gap-1 rounded-xl bg-surface-soft px-3 py-2.5">
               <span className="text-sm text-text-muted">R$</span>
@@ -141,46 +148,11 @@ export function AlunoPerfil({
                 value={campos.valor}
                 onChange={(e) => muda({ valor: e.target.value })}
                 inputMode="decimal"
-                className="w-full bg-transparent text-[15px] text-text outline-none"
+                className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none"
               />
             </div>
           </label>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-              Cobrança
-            </span>
-            <div className="flex rounded-xl bg-surface-soft p-1">
-              {(
-                [
-                  ["mensalidade", "Mensal"],
-                  ["creditos", "Pacote"],
-                ] as const
-              ).map(([modo, rotulo]) => (
-                <button
-                  key={modo}
-                  type="button"
-                  onClick={() => muda({ modo })}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    campos.modo === modo
-                      ? "bg-surface text-text shadow-soft"
-                      : "text-text-muted"
-                  }`}
-                >
-                  {rotulo}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-              Dias
-            </span>
-            <DiasSemanaChips value={campos.dias} onChange={(dias) => muda({ dias })} />
-          </div>
-          <label className="flex flex-col gap-1">
+          <label className="flex shrink-0 flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
               Horário
             </span>
@@ -188,9 +160,44 @@ export function AlunoPerfil({
               type="time"
               value={campos.horario}
               onChange={(e) => muda({ horario: e.target.value })}
-              className="rounded-xl bg-surface-soft px-2.5 py-2 text-sm text-text outline-none"
+              className="rounded-xl bg-surface-soft px-2.5 py-2.5 text-sm text-text outline-none"
             />
           </label>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Cobrança
+          </span>
+          <div className="grid grid-cols-3 rounded-xl bg-surface-soft p-1">
+            {(
+              [
+                ["mensalidade", "Mensal"],
+                ["por_aula", "Por aula"],
+                ["creditos", "Pacote"],
+              ] as const
+            ).map(([modo, rotulo]) => (
+              <button
+                key={modo}
+                type="button"
+                onClick={() => muda({ modo })}
+                className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
+                  campos.modo === modo
+                    ? "bg-surface text-text shadow-soft"
+                    : "text-text-muted"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Dias
+          </span>
+          <DiasSemanaChips value={campos.dias} onChange={(dias) => muda({ dias })} />
         </div>
 
         <label className="flex flex-col gap-1">

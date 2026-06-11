@@ -44,7 +44,8 @@ export default async function HojePage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="relative overflow-hidden px-5 pb-7 pt-12">
+      {/* pr-16 reserva a área da engrenagem — sem colisão com o título */}
+      <header className="relative overflow-hidden px-5 pb-7 pr-16 pt-12">
         <div className={`orbe orbe--${periodo}`} aria-hidden="true" />
         <Link
           href="/config"

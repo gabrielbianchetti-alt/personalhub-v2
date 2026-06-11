@@ -8,6 +8,7 @@ import { Check, X } from "lucide-react";
 import type { PendenciaVM } from "@/lib/hoje";
 import { confirmarDia, resolverDiaComFaltas } from "@/app/actions/registros";
 import { dataCurta } from "@/lib/datas";
+import { vibra } from "@/lib/haptico";
 
 export function Pendencias({ pendencias }: { pendencias: PendenciaVM[] }) {
   const [fila, setFila] = useState(pendencias);
@@ -20,6 +21,7 @@ export function Pendencias({ pendencias }: { pendencias: PendenciaVM[] }) {
   if (!atual) return null;
 
   function resolver(acao: () => Promise<void>) {
+    vibra();
     const anterior = fila;
     setFila((f) => f.slice(1));
     setCorrigindo(false);
@@ -61,16 +63,16 @@ export function Pendencias({ pendencias }: { pendencias: PendenciaVM[] }) {
             type="button"
             disabled={pending}
             onClick={() => resolver(() => confirmarDia(atual.dataIso))}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-surface py-2.5 text-sm font-medium text-success shadow-soft active:opacity-80 disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-surface py-2.5 text-sm font-medium text-success shadow-soft active:opacity-80 disabled:opacity-60"
           >
-            <Check size={16} strokeWidth={2.4} />
+            <Check size={16} strokeWidth={2.4} className="shrink-0" />
             Todos fizeram
           </button>
           <button
             type="button"
             disabled={pending}
             onClick={() => setCorrigindo(true)}
-            className="flex-1 rounded-full py-2.5 text-sm font-medium text-text-muted active:bg-surface disabled:opacity-60"
+            className="flex-1 whitespace-nowrap rounded-full py-2.5 text-sm font-medium text-text-muted active:bg-surface disabled:opacity-60"
           >
             Corrigir
           </button>

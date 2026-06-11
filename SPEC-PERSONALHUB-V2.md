@@ -57,7 +57,7 @@ Criar conta → tela única de cadastro em lote → digitar linha a linha: nome 
 - **Cadastro em lote (o onboarding):** tela única estilo checklist conversacional. Cada linha = 1 aluno com os 4 dados mínimos:
   1. Nome
   2. Valor
-  3. Modo de cobrança: `mensalidade` ou `creditos` (pacote)
+  3. Modo de cobrança: `mensalidade`, `por_aula` ou `creditos` (pacote) — *3 modos desde 11/jun/2026, decisão do uso real*
   4. Dias da semana (chips S T Q Q S S D)
 - Telefone/WhatsApp: **opcional no cadastro**; se ausente, é pedido inline na primeira cobrança daquele aluno.
 - Perfil do aluno: os 4 dados + telefone + campos opcionais colapsados ("Mais detalhes": observações, anamnese, data de início). Campos opcionais **nunca aparecem no fluxo de entrada**.
@@ -132,8 +132,13 @@ fechamentos
 aulas_do_mes = ocorrencias(dias_semana, mes)        # função validada da v1
 realizadas   = aulas_do_mes − faltas − desmarcadas + extras + ajuste_manual
 valor_final  = mensalidade: valor_mensal (faltas afetam contagem, não valor, salvo regra do professor)
+               por_aula:    realizadas × valor (falta desconta; total varia mês a mês)
                creditos:    debita saldo; cobrança = novo pacote quando saldo baixa
 ```
+
+> **Nota (11/jun/2026):** `por_aula` entrou como 3º modo por decisão de uso real
+> (Gabriel). `alunos.valor_mensal` guarda o valor DA AULA nesse modo. Enum
+> ampliado na migração 0005.
 
 > Regra de negócio em aberto (decidir no co-dev, default sugerido): em `mensalidade`, falta **não** desconta valor por padrão; desmarcação com reposição é neutra. Configurável por professor numa v2.x, não na v2.0.
 

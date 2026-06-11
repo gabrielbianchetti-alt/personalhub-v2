@@ -14,9 +14,13 @@
   --warning:       #E2A33C;
   --danger:        #D9534F;
   --glass-bg:      rgba(255, 255, 255, 0.65);
+  --glass-border:  rgba(255, 255, 255, 0.4);
+  /* Elevação: sombra de tinta no claro; vira contorno sutil no escuro
+     (sombra escura some sobre fundo escuro). */
+  --sombra:        0 8px 30px -8px rgba(31, 27, 22, 0.12);
 }
 
-/* Modo escuro: nasce dos mesmos tokens. Toggle manual depois. */
+/* Modo escuro: nasce dos mesmos tokens. Feedback recalibrado p/ contraste. */
 [data-theme="dark"] {
   --bg:            #14202A;
   --surface:       #1C2B37;
@@ -25,7 +29,12 @@
   --text-muted:    #93A1AC;
   --accent:        #F58A5C;
   --accent-soft:   #2E3B45;
+  --success:       #4BB587;
+  --warning:       #EBB45C;
+  --danger:        #E5736F;
   --glass-bg:      rgba(20, 32, 42, 0.6);
+  --glass-border:  rgba(255, 255, 255, 0.08);
+  --sombra:        0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 /* Expõe os tokens como utilitários Tailwind v4. */
@@ -40,7 +49,8 @@
   --color-success:      var(--success);
   --color-warning:      var(--warning);
   --color-danger:       var(--danger);
-  --shadow-soft:        0 8px 30px -8px rgba(31, 27, 22, 0.12);
+  --color-glass-border: var(--glass-border);
+  --shadow-soft:        var(--sombra);
 }
 
 body {

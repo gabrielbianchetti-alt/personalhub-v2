@@ -12,6 +12,7 @@ import {
 import { CheckinCard } from "./CheckinCard";
 import { ExtraSheet } from "./ExtraSheet";
 import { Pendencias } from "./Pendencias";
+import { vibra } from "@/lib/haptico";
 
 function toMinutes(horario: string): number | null {
   if (!horario) return null;
@@ -55,6 +56,7 @@ export function CheckinList({
   const toggleFalta = (id: string) => {
     const atual = alunos.find((a) => a.id === id);
     if (!atual) return;
+    vibra();
     const marcar = !atual.faltou;
     const flip = (v: boolean) =>
       setAlunos((prev) => prev.map((a) => (a.id === id ? { ...a, faltou: v } : a)));
@@ -66,6 +68,7 @@ export function CheckinList({
   };
 
   const addExtra = (rosterId: string) => {
+    vibra();
     setSheetOpen(false);
     const existente = alunos.find((a) => a.id === rosterId);
     const desfazer = () =>

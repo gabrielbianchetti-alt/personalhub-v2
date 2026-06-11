@@ -36,13 +36,17 @@ export function CheckinCard({
             {aluno.nome}
           </p>
           {aluno.extras > 0 && (
+            // O × deixa claro que o chip remove; -m/p amplia o alvo de toque.
             <button
               type="button"
               onClick={() => onTirarExtra(aluno.id)}
               aria-label={`Remover uma aula extra de ${aluno.nome}`}
-              className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent active:opacity-70"
+              className="-my-2 shrink-0 py-2 active:opacity-70"
             >
-              +{aluno.extras} extra
+              <span className="flex items-center gap-1 rounded-full bg-accent-soft py-0.5 pl-2 pr-1.5 text-xs font-medium text-accent">
+                +{aluno.extras} extra
+                <X size={11} strokeWidth={2.8} />
+              </span>
             </button>
           )}
         </div>
@@ -64,7 +68,7 @@ export function CheckinCard({
         type="button"
         aria-pressed={aluno.faltou}
         onClick={() => onToggleFalta(aluno.id)}
-        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-medium transition-colors ${
           aluno.faltou
             ? "bg-danger text-white"
             : "bg-surface-soft text-text-muted active:bg-danger/10"

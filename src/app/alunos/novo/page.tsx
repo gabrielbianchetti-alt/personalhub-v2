@@ -59,7 +59,10 @@ export default function NovoAlunosPage() {
         >
           <ArrowLeft size={19} />
         </Link>
-        <h1 className="font-display text-3xl text-text">Cadastrar alunos</h1>
+        {/* título fixo: encolhe a 320px em vez de quebrar/truncar */}
+        <h1 className="font-display text-[1.75rem] text-text min-[360px]:text-3xl">
+          Cadastrar alunos
+        </h1>
       </div>
       <p className="mt-2 text-sm text-text-muted">
         Nome, valor, como cobra e os dias da semana. O resto fica pra depois.
@@ -76,11 +79,12 @@ export default function NovoAlunosPage() {
                 className="w-full bg-transparent text-base font-medium text-text outline-none placeholder:font-normal placeholder:text-text-muted"
               />
               {linhas.length > 1 && (
+                // -m/p amplia o alvo de toque p/ ~44px sem mexer no layout
                 <button
                   type="button"
                   aria-label="Remover linha"
                   onClick={() => remove(i)}
-                  className="shrink-0 text-text-muted active:text-danger"
+                  className="-m-3 shrink-0 p-3 text-text-muted active:text-danger"
                 >
                   <Trash2 size={17} />
                 </button>
@@ -88,46 +92,51 @@ export default function NovoAlunosPage() {
             </div>
 
             <div className="mt-3 flex items-center gap-2">
-              <div className="flex flex-1 items-center gap-1 rounded-xl bg-surface-soft px-3 py-2">
+              <div className="flex min-w-0 flex-1 items-center gap-1 rounded-xl bg-surface-soft px-3 py-2">
                 <span className="text-sm text-text-muted">R$</span>
                 <input
                   value={l.valor}
                   onChange={(e) => muda(i, { valor: e.target.value })}
-                  placeholder="300"
+                  placeholder={l.modo === "por_aula" ? "80" : "300"}
                   inputMode="decimal"
-                  className="w-full bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
+                  className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
                 />
+                {l.modo === "por_aula" && (
+                  <span className="shrink-0 text-xs text-text-muted">/aula</span>
+                )}
               </div>
-              <div className="flex rounded-xl bg-surface-soft p-1">
-                {(
-                  [
-                    ["mensalidade", "Mensal"],
-                    ["creditos", "Pacote"],
-                  ] as const
-                ).map(([modo, rotulo]) => (
-                  <button
-                    key={modo}
-                    type="button"
-                    onClick={() => muda(i, { modo })}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                      l.modo === modo ? "bg-surface text-text shadow-soft" : "text-text-muted"
-                    }`}
-                  >
-                    {rotulo}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <DiasSemanaChips value={l.dias} onChange={(dias) => muda(i, { dias })} />
               <input
                 type="time"
                 value={l.horario}
                 onChange={(e) => muda(i, { horario: e.target.value })}
                 aria-label="Horário (opcional)"
-                className="rounded-xl bg-surface-soft px-2.5 py-1.5 text-sm text-text outline-none"
+                className="shrink-0 rounded-xl bg-surface-soft px-2.5 py-1.5 text-sm text-text outline-none"
               />
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 rounded-xl bg-surface-soft p-1">
+              {(
+                [
+                  ["mensalidade", "Mensal"],
+                  ["por_aula", "Por aula"],
+                  ["creditos", "Pacote"],
+                ] as const
+              ).map(([modo, rotulo]) => (
+                <button
+                  key={modo}
+                  type="button"
+                  onClick={() => muda(i, { modo })}
+                  className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
+                    l.modo === modo ? "bg-surface text-text shadow-soft" : "text-text-muted"
+                  }`}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3">
+              <DiasSemanaChips value={l.dias} onChange={(dias) => muda(i, { dias })} />
             </div>
           </div>
         ))}

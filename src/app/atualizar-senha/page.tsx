@@ -51,6 +51,7 @@ export default function AtualizarSenhaPage() {
             type="password"
             autoComplete="new-password"
             required
+            aria-label="Nova senha"
             placeholder="nova senha"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
@@ -60,6 +61,7 @@ export default function AtualizarSenhaPage() {
             type="password"
             autoComplete="new-password"
             required
+            aria-label="Repita a nova senha"
             placeholder="repete a senha"
             value={confirma}
             onChange={(e) => setConfirma(e.target.value)}

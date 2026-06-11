@@ -89,6 +89,24 @@ export function valorMensalidade(valorMensal: number | null): number {
   return Number(valorMensal ?? 0);
 }
 
+/**
+ * Valor do fechamento no modo por_aula: aulas realizadas × valor da aula.
+ * Aqui falta/desmarcada DESCONTA (não fez, não paga) e o ajuste manual
+ * mexe direto no total — tudo via `realizadas`.
+ */
+export function valorPorAula(valorAula: number | null, realizadas: number): number {
+  return Math.max(0, realizadas) * Number(valorAula ?? 0);
+}
+
+/** Total do fechamento conforme o modo (créditos não fecha mês — vende pacote). */
+export function valorFechamento(
+  modo: "mensalidade" | "por_aula",
+  valor: number | null,
+  realizadas: number,
+): number {
+  return modo === "por_aula" ? valorPorAula(valor, realizadas) : valorMensalidade(valor);
+}
+
 /** "12 aulas · 1 falta · 2 extras" — resumo legível do card de cobrança. */
 export function resumoContagem(c: ContagemMes, e: ExcecoesMes, ajuste = 0): string {
   const partes = [`${c.realizadas} ${c.realizadas === 1 ? "aula" : "aulas"}`];

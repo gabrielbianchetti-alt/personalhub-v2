@@ -1,7 +1,9 @@
 "use client";
 
 // Bottom sheet glass genérico (§6.4 — sheets/modais são lugar sancionado de glass).
+// Fecha com Esc e trava o scroll da página enquanto aberto.
 
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -16,6 +18,20 @@ export function Sheet({
   onClose: () => void;
   children: ReactNode;
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", aoTeclar);
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      document.body.style.overflow = overflowAnterior;
+    };
+  }, [open, onClose]);
+
   return (
     <div
       className={`fixed inset-0 z-[60] ${open ? "" : "pointer-events-none"}`}
@@ -38,7 +54,7 @@ export function Sheet({
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        <div className="glass rounded-t-3xl border-t border-white/40 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-soft">
+        <div className="glass rounded-t-3xl border-t border-glass-border px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-soft">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-text-muted/30" />
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-2xl text-text">{title}</h2>
