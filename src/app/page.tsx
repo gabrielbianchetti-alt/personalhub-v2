@@ -43,10 +43,13 @@ export default async function HojePage() {
   const periodo = sp.hour < 12 ? "manha" : sp.hour < 18 ? "tarde" : "noite";
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col">
+      {/* Orbe em camada de página: o brilho esmaece sozinho, sem corte. */}
+      <div className="camada-ambiente" aria-hidden="true">
+        <div className={`orbe orbe--${periodo}`} />
+      </div>
       {/* pr-16 reserva a área da engrenagem — sem colisão com o título */}
-      <header className="relative overflow-hidden px-5 pb-7 pr-16 pt-12">
-        <div className={`orbe orbe--${periodo}`} aria-hidden="true" />
+      <header className="relative px-5 pb-7 pr-16 pt-12">
         <Link
           href="/config"
           aria-label="Configurações"

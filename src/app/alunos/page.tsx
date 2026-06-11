@@ -9,8 +9,11 @@ export default async function AlunosPage() {
     .order("nome");
 
   return (
-    <div className="flex flex-1 flex-col px-5 pt-12">
-      <h1 className="font-display text-[2.5rem] leading-[1.05] text-text">Alunos</h1>
+    <div className="relative flex flex-1 flex-col px-5 pt-12">
+      <div className="camada-ambiente" aria-hidden="true">
+        <div className="aura" />
+      </div>
+      <h1 className="relative font-display text-[2.5rem] leading-[1.05] text-text">Alunos</h1>
       <AlunosLista alunos={data ?? []} />
     </div>
   );

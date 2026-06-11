@@ -28,13 +28,16 @@ export function ConfigClient({
   email,
   nome: nomeInicial,
   template: templateInicial,
+  chavePix: chavePixInicial,
 }: {
   email: string;
   nome: string;
   template: string;
+  chavePix: string;
 }) {
   const [nome, setNome] = useState(nomeInicial);
   const [template, setTemplate] = useState(templateInicial);
+  const [chavePix, setChavePix] = useState(chavePixInicial);
   const [tema, setTema] = useState<Tema>("auto");
   const [salvo, setSalvo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -68,8 +71,11 @@ export function ConfigClient({
   });
 
   return (
-    <div className="flex flex-1 flex-col px-5 pt-12 pb-6">
-      <div className="flex items-center gap-3">
+    <div className="relative flex flex-1 flex-col px-5 pt-12 pb-6">
+      <div className="camada-ambiente" aria-hidden="true">
+        <div className="aura" />
+      </div>
+      <div className="relative flex items-center gap-3">
         <Link
           href="/"
           aria-label="Voltar"
@@ -110,7 +116,27 @@ export function ConfigClient({
             className="resize-none rounded-xl bg-surface-soft px-3 py-2.5 text-[15px] leading-relaxed text-text outline-none placeholder:text-text-muted"
           />
           <span className="text-xs text-text-muted">
-            Use {"{nome}"}, {"{valor}"}, {"{mes}"} e {"{aulas}"} — preenchem sozinhos.
+            Use {"{nome}"}, {"{valor}"}, {"{mes}"}, {"{aulas}"} e {"{pix}"} —
+            preenchem sozinhos.
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Chave Pix
+          </span>
+          <input
+            value={chavePix}
+            onChange={(e) => {
+              setChavePix(e.target.value);
+              setSalvo(false);
+            }}
+            placeholder="CPF, email, telefone ou chave aleatória"
+            className="rounded-xl bg-surface-soft px-3 py-2.5 text-[15px] text-text outline-none placeholder:text-text-muted"
+          />
+          <span className="text-xs text-text-muted">
+            Com a chave salva, a cobrança já vai com o Pix copia e cola no valor
+            exato do fechamento.
           </span>
         </label>
 
@@ -132,7 +158,7 @@ export function ConfigClient({
             setErro(null);
             startTransition(async () => {
               try {
-                await salvarConta(nome, template);
+                await salvarConta(nome, template, chavePix);
                 setSalvo(true);
               } catch (e) {
                 setErro(e instanceof Error ? e.message : "Não salvou.");

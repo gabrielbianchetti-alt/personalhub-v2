@@ -71,6 +71,15 @@ export function diasNoMes(year: number, month0: number): number {
   return new Date(Date.UTC(year, month0 + 1, 0)).getUTCDate();
 }
 
+/** Dias corridos entre duas datas ISO (b − a). */
+export function diffDias(aIso: string, bIso: string): number {
+  const a = parteIso(aIso);
+  const b = parteIso(bIso);
+  return Math.round(
+    (Date.UTC(b.year, b.month, b.day) - Date.UTC(a.year, a.month, a.day)) / 86400000,
+  );
+}
+
 /** "YYYY-MM-01" do mês — chave de fechamentos. */
 export function mesRefIso(year: number, month0: number): string {
   return isoDe(year, month0, 1);

@@ -1,16 +1,29 @@
 "use client";
 
 // Cobrança (§4.3): valor como hero, resumo legível, cobrar em ≤3 toques.
+// Extras: Pix copia e cola, follow-up de enviadas sem resposta e o
+// "Fechar o mês" guiado (encadeia os sheets aluno a aluno).
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Minus, Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
-import { vibra } from "@/lib/haptico";
-import type { CobrancaItemVM, ResumoMesVM } from "@/lib/cobranca";
+import {
+  Check,
+  ChevronRight,
+  Copy,
+  ImageIcon,
+  Minus,
+  Plus,
+  RotateCcw,
+  SlidersHorizontal,
+} from "lucide-react";
+import { resumoMes, type CobrancaItemVM } from "@/lib/cobranca";
 import { formatBRL } from "@/lib/datas";
+import { vibra } from "@/lib/haptico";
+import { pixCopiaECola } from "@/lib/pix";
 import {
   renderMensagem,
+  TEMPLATE_LEMBRETE,
   TEMPLATE_PACOTE,
   primeiroNome,
   telefoneWa,
@@ -26,33 +39,46 @@ import {
 import { salvarTelefone } from "@/app/actions/alunos";
 import { Sheet } from "./Sheet";
 
-type SheetState =
-  | { tipo: "cobrar"; item: CobrancaItemVM }
-  | { tipo: "ajuste"; item: CobrancaItemVM }
-  | { tipo: "pacote"; item: CobrancaItemVM }
-  | null;
+type SheetState = { tipo: "cobrar" | "ajuste" | "pacote"; alunoId: string } | null;
 
 const STATUS_ROTULO = { aberto: "aberto", enviado: "enviada", pago: "paga" } as const;
 
+/** Dias desde o envio — alimenta o "enviada · 3d" e o tom do follow-up. */
+function diasDesde(enviadoEm: string | null): number {
+  if (!enviadoEm) return 0;
+  const ms = Date.now() - new Date(enviadoEm).getTime();
+  return Math.max(0, Math.floor(ms / 86400000));
+}
+
 export function CobrancaLista({
   itens,
-  resumo,
   mesRef,
   nomeMesAtual,
   template,
+  chavePix,
+  nomeProfessor,
 }: {
   itens: CobrancaItemVM[];
-  resumo: ResumoMesVM;
   mesRef: string;
   nomeMesAtual: string;
   template: string | null;
+  chavePix: string | null;
+  nomeProfessor: string | null;
 }) {
   const router = useRouter();
   const [lista, setLista] = useState(itens);
   const [sheet, setSheet] = useState<SheetState>(null);
+  // Fechamento guiado: fila de alunoIds ainda por cobrar + total da rodada.
+  const [guia, setGuia] = useState<{ fila: string[]; total: number } | null>(null);
   const [celebrando, setCelebrando] = useState<string | null>(null);
+  const [festa, setFesta] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // Resumo ao vivo: acompanha os status otimistas desta sessão.
+  const resumo = resumoMes(lista);
+  // Item do sheet resolvido na renderização — sempre fresco (telefone, status).
+  const sheetItem = sheet ? (lista.find((i) => i.alunoId === sheet.alunoId) ?? null) : null;
 
   const setStatus = (alunoId: string, status: CobrancaItemVM["status"]) =>
     setLista((prev) =>
@@ -71,10 +97,42 @@ export function CobrancaLista({
     });
   }
 
+  const fecharSheet = () => {
+    setSheet(null);
+    setGuia(null); // sair no meio cancela a rodada guiada
+  };
+
+  /** Avança a rodada guiada (ou só fecha o sheet fora dela). */
+  const avancar = (doneId: string) => {
+    if (!guia) {
+      setSheet(null);
+      return;
+    }
+    const fila = guia.fila.filter((id) => id !== doneId);
+    if (fila.length > 0) {
+      setGuia({ ...guia, fila });
+      setSheet({ tipo: "cobrar", alunoId: fila[0] });
+    } else {
+      setGuia(null);
+      setSheet(null);
+      setFesta(true);
+      vibra(20);
+      setTimeout(() => setFesta(false), 2200);
+    }
+  };
+
+  const iniciarFechamentoGuiado = () => {
+    const fila = lista
+      .filter((i) => i.modo !== "creditos" && i.status === "aberto")
+      .map((i) => i.alunoId);
+    if (fila.length === 0) return;
+    setGuia({ fila, total: fila.length });
+    setSheet({ tipo: "cobrar", alunoId: fila[0] });
+  };
+
   // Enviada no WhatsApp → status + celebração discreta (§4.3).
   const aoEnviar = (item: CobrancaItemVM, link: string) => {
     window.open(link, "_blank", "noopener");
-    setSheet(null);
     vibra(15);
     const statusAnterior = item.status;
     setStatus(item.alunoId, "enviado");
@@ -84,6 +142,7 @@ export function CobrancaLista({
       () => marcarEnviado(item.alunoId, mesRef),
       () => setStatus(item.alunoId, statusAnterior),
     );
+    avancar(item.alunoId);
   };
 
   const aoPagar = (item: CobrancaItemVM) => {
@@ -125,6 +184,14 @@ export function CobrancaLista({
 
   return (
     <>
+      {festa && (
+        <div className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center">
+          <p className="glass rounded-3xl border border-glass-border px-8 py-5 font-display text-2xl text-text shadow-soft">
+            Mês fechado 👊
+          </p>
+        </div>
+      )}
+
       {/* Card flutuante de resumo — 3º lugar sancionado de glass (§6.4). */}
       <div className="glass sticky top-3 z-40 mt-4 rounded-[20px] border border-glass-border px-4 py-3 shadow-soft">
         <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
@@ -152,6 +219,16 @@ export function CobrancaLista({
             )}
           </p>
         </div>
+        {resumo.abertos > 0 && (
+          <button
+            type="button"
+            onClick={iniciarFechamentoGuiado}
+            className="mt-2.5 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-accent py-2.5 text-sm font-medium text-white active:opacity-90"
+          >
+            Fechar o mês · {resumo.abertos} {resumo.abertos === 1 ? "aberta" : "abertas"}
+            <ChevronRight size={16} strokeWidth={2.4} />
+          </button>
+        )}
       </div>
 
       {erro && (
@@ -161,192 +238,237 @@ export function CobrancaLista({
       )}
 
       <ul className="mt-4 flex flex-col gap-3 pb-4">
-        {lista.map((item) => (
-          <li
-            key={item.alunoId}
-            className="relative rounded-[20px] bg-surface p-4 shadow-soft"
-          >
-            {celebrando === item.alunoId && (
-              <div className="celebra pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[20px] bg-surface/80">
-                <p className="font-display text-xl text-success">Cobrança enviada ✓</p>
-              </div>
-            )}
+        {lista.map((item) => {
+          const dias = item.status === "enviado" ? diasDesde(item.enviadoEm) : 0;
+          const esquecida = item.status === "enviado" && dias >= 3;
+          return (
+            <li
+              key={item.alunoId}
+              className="relative rounded-[20px] bg-surface p-4 shadow-soft"
+            >
+              {celebrando === item.alunoId && (
+                <div className="celebra pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[20px] bg-surface/80">
+                  <p className="font-display text-xl text-success">Cobrança enviada ✓</p>
+                </div>
+              )}
 
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-base font-medium text-text">{item.nome}</p>
-                <p className="mt-0.5 truncate text-sm text-text-muted" title={item.resumo}>
-                  {item.resumo}
-                </p>
-                {item.ajusteMotivo && (
-                  <p className="mt-0.5 truncate text-xs text-text-muted">
-                    “{item.ajusteMotivo}”
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-medium text-text">{item.nome}</p>
+                  <p className="mt-0.5 truncate text-sm text-text-muted" title={item.resumo}>
+                    {item.resumo}
                   </p>
-                )}
+                  {item.ajusteMotivo && (
+                    <p className="mt-0.5 truncate text-xs text-text-muted">
+                      “{item.ajusteMotivo}”
+                    </p>
+                  )}
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-display text-2xl leading-tight text-text tabular-nums min-[390px]:text-[1.75rem]">
+                    {item.modo === "creditos" && item.ultimoPacote === null
+                      ? "—"
+                      : formatBRL(item.valor)}
+                  </p>
+                  {item.valorAula !== null && (
+                    <p className="text-xs text-text-muted">
+                      {formatBRL(item.valorAula)}/aula
+                    </p>
+                  )}
+                  {item.modo !== "creditos" && item.status !== "aberto" && (
+                    <span
+                      className={`text-xs font-medium ${
+                        item.status === "pago"
+                          ? "text-success"
+                          : esquecida
+                            ? "text-warning"
+                            : "text-accent"
+                      }`}
+                    >
+                      {STATUS_ROTULO[item.status]}
+                      {item.status === "pago" && " ✓"}
+                      {item.status === "enviado" && dias >= 1 && ` · ${dias}d`}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="shrink-0 text-right">
-                <p className="font-display text-2xl leading-tight text-text tabular-nums min-[390px]:text-[1.75rem]">
-                  {item.modo === "creditos" && item.ultimoPacote === null
-                    ? "—"
-                    : formatBRL(item.valor)}
-                </p>
-                {item.valorAula !== null && (
-                  <p className="text-xs text-text-muted">
-                    {formatBRL(item.valorAula)}/aula
-                  </p>
-                )}
-                {item.modo !== "creditos" && item.status !== "aberto" && (
-                  <span
-                    className={`text-xs font-medium ${
-                      item.status === "pago" ? "text-success" : "text-accent"
+
+              <div className="mt-3 flex items-center gap-2">
+                {item.modo !== "creditos" ? (
+                  <>
+                    {item.status !== "pago" && (
+                      <button
+                        type="button"
+                        aria-label={
+                          item.status === "enviado"
+                            ? "Lembrar no WhatsApp"
+                            : "Cobrar no WhatsApp"
+                        }
+                        onClick={() => setSheet({ tipo: "cobrar", alunoId: item.alunoId })}
+                        className={`min-w-0 flex-1 whitespace-nowrap rounded-full py-2.5 text-sm font-medium active:opacity-90 ${
+                          item.status === "enviado" && !esquecida
+                            ? "bg-accent-soft text-accent"
+                            : "bg-accent text-white"
+                        }`}
+                      >
+                        {item.status === "enviado" ? (
+                          "Lembrar"
+                        ) : (
+                          <>
+                            Cobrar
+                            <span className="hidden min-[390px]:inline"> no WhatsApp</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {item.status !== "pago" ? (
+                      <button
+                        type="button"
+                        onClick={() => aoPagar(item)}
+                        className="whitespace-nowrap rounded-full bg-surface-soft px-4 py-2.5 text-sm font-medium text-text-muted active:bg-success/15 active:text-success"
+                      >
+                        <Check size={16} className="inline" /> Pago
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => aoReabrir(item)}
+                        className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-soft px-4 py-2.5 text-sm font-medium text-text-muted active:opacity-80"
+                      >
+                        <RotateCcw size={14} /> Reabrir
+                      </button>
+                    )}
+                    {item.status === "aberto" && (
+                      <button
+                        type="button"
+                        aria-label={`Ajustar contagem de ${item.nome}`}
+                        onClick={() => setSheet({ tipo: "ajuste", alunoId: item.alunoId })}
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-soft text-text-muted active:bg-accent-soft"
+                      >
+                        <SlidersHorizontal size={16} />
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSheet({ tipo: "pacote", alunoId: item.alunoId })}
+                    className={`flex-1 whitespace-nowrap rounded-full py-2.5 text-sm font-medium active:opacity-90 ${
+                      item.saldo !== null && item.saldo <= 2
+                        ? "bg-accent text-white"
+                        : "bg-surface-soft text-text"
                     }`}
                   >
-                    {STATUS_ROTULO[item.status]}
-                    {item.status === "pago" && " ✓"}
-                  </span>
+                    {item.ultimoPacote ? "Vender novo pacote" : "Vender primeiro pacote"}
+                  </button>
                 )}
               </div>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              {item.modo !== "creditos" ? (
-                <>
-                  {item.status !== "pago" && (
-                    <button
-                      type="button"
-                      aria-label={
-                        item.status === "enviado" ? "Cobrar de novo" : "Cobrar no WhatsApp"
-                      }
-                      onClick={() => setSheet({ tipo: "cobrar", item })}
-                      className="min-w-0 flex-1 whitespace-nowrap rounded-full bg-accent py-2.5 text-sm font-medium text-white active:opacity-90"
-                    >
-                      {item.status === "enviado" ? "Cobrar de novo" : (
-                        <>
-                          Cobrar
-                          <span className="hidden min-[390px]:inline"> no WhatsApp</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                  {item.status !== "pago" ? (
-                    <button
-                      type="button"
-                      onClick={() => aoPagar(item)}
-                      className="rounded-full bg-surface-soft px-4 py-2.5 text-sm font-medium text-text-muted active:bg-success/15 active:text-success"
-                    >
-                      <Check size={16} className="inline" /> Pago
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => aoReabrir(item)}
-                      className="flex items-center gap-1.5 rounded-full bg-surface-soft px-4 py-2.5 text-sm font-medium text-text-muted active:opacity-80"
-                    >
-                      <RotateCcw size={14} /> Reabrir
-                    </button>
-                  )}
-                  {item.status === "aberto" && (
-                    <button
-                      type="button"
-                      aria-label={`Ajustar contagem de ${item.nome}`}
-                      onClick={() => setSheet({ tipo: "ajuste", item })}
-                      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-soft text-text-muted active:bg-accent-soft"
-                    >
-                      <SlidersHorizontal size={16} />
-                    </button>
-                  )}
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSheet({ tipo: "pacote", item })}
-                  className={`flex-1 rounded-full py-2.5 text-sm font-medium active:opacity-90 ${
-                    item.saldo !== null && item.saldo <= 2
-                      ? "bg-accent text-white"
-                      : "bg-surface-soft text-text"
-                  }`}
-                >
-                  {item.ultimoPacote ? "Vender novo pacote" : "Vender primeiro pacote"}
-                </button>
-              )}
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
-      {sheet?.tipo === "cobrar" && (
+      {sheet?.tipo === "cobrar" && sheetItem && (
         <CobrarSheet
-          item={sheet.item}
+          item={sheetItem}
+          mesRef={mesRef}
           nomeMesAtual={nomeMesAtual}
           template={template}
+          chavePix={chavePix}
+          nomeProfessor={nomeProfessor}
+          progresso={guia ? { atual: guia.total - guia.fila.length + 1, total: guia.total } : null}
           onEnviar={aoEnviar}
-          onTelefoneSalvo={(tel) => {
+          onPular={guia ? () => avancar(sheetItem.alunoId) : null}
+          onTelefone={(tel) =>
             setLista((prev) =>
               prev.map((i) =>
-                i.alunoId === sheet.item.alunoId ? { ...i, telefone: tel } : i,
+                i.alunoId === sheetItem.alunoId ? { ...i, telefone: tel } : i,
               ),
-            );
-            setSheet({ tipo: "cobrar", item: { ...sheet.item, telefone: tel } });
-          }}
-          onClose={() => setSheet(null)}
+            )
+          }
+          onClose={fecharSheet}
         />
       )}
-      {sheet?.tipo === "ajuste" && (
+      {sheet?.tipo === "ajuste" && sheetItem && (
         <AjusteSheet
-          item={sheet.item}
+          item={sheetItem}
           mesRef={mesRef}
           onSalvo={() => {
             setSheet(null);
             router.refresh();
           }}
-          onClose={() => setSheet(null)}
+          onClose={fecharSheet}
         />
       )}
-      {sheet?.tipo === "pacote" && (
+      {sheet?.tipo === "pacote" && sheetItem && (
         <PacoteSheet
-          item={sheet.item}
+          item={sheetItem}
           onVendido={(link) => {
             if (link) window.open(link, "_blank", "noopener");
             setSheet(null);
             router.refresh();
           }}
-          onClose={() => setSheet(null)}
+          onClose={fecharSheet}
         />
       )}
     </>
   );
 }
 
-// ── Cobrar: preview da mensagem + telefone inline na 1ª vez (§4.2) ──
+// ── Cobrar: preview da mensagem + telefone inline na 1ª vez (§4.2).
+//    Quando já enviada vira lembrete; com chave Pix anexa o copia e cola. ──
 function CobrarSheet({
   item,
+  mesRef,
   nomeMesAtual,
   template,
+  chavePix,
+  nomeProfessor,
+  progresso,
   onEnviar,
-  onTelefoneSalvo,
+  onPular,
+  onTelefone,
   onClose,
 }: {
   item: CobrancaItemVM;
+  mesRef: string;
   nomeMesAtual: string;
   template: string | null;
+  chavePix: string | null;
+  nomeProfessor: string | null;
+  progresso: { atual: number; total: number } | null;
   onEnviar: (item: CobrancaItemVM, link: string) => void;
-  onTelefoneSalvo: (tel: string) => void;
+  onPular: (() => void) | null;
+  onTelefone: (tel: string) => void;
   onClose: () => void;
 }) {
   const [tel, setTel] = useState("");
+  const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const telefoneOk = telefoneWa(item.telefone);
-  const mensagem = renderMensagem(template, {
+  const lembrete = item.status === "enviado";
+
+  const corpo = renderMensagem(lembrete ? TEMPLATE_LEMBRETE : template, {
     nome: item.nome,
     valor: formatBRL(item.valor),
     mes: nomeMesAtual,
     aulas: item.resumo,
+    pix: chavePix ?? "",
   });
+  const pix =
+    chavePix && item.valor > 0
+      ? pixCopiaECola({ chave: chavePix, nome: nomeProfessor ?? "", valor: item.valor })
+      : null;
+  const mensagem = pix ? `${corpo}\n\nPix copia e cola:\n${pix}` : corpo;
+
+  const titulo = `${lembrete ? "Lembrar" : "Cobrar"} ${primeiroNome(item.nome)}${
+    progresso ? ` · ${progresso.atual}/${progresso.total}` : ""
+  }`;
 
   return (
-    <Sheet open title={`Cobrar ${primeiroNome(item.nome)}`} onClose={onClose}>
+    <Sheet open title={titulo} onClose={onClose}>
       {!telefoneOk ? (
         <div>
           <p className="text-sm text-text-muted">
@@ -373,7 +495,7 @@ function CobrarSheet({
               startTransition(async () => {
                 try {
                   await salvarTelefone(item.alunoId, tel);
-                  onTelefoneSalvo(tel);
+                  onTelefone(tel);
                 } catch (e) {
                   setErro(e instanceof Error ? e.message : "Não salvou.");
                 }
@@ -383,11 +505,20 @@ function CobrarSheet({
           >
             {pending ? "Salvando…" : "Salvar e continuar"}
           </button>
+          {onPular && (
+            <button
+              type="button"
+              onClick={onPular}
+              className="mt-2 w-full rounded-2xl py-2.5 text-sm font-medium text-text-muted active:bg-surface-soft"
+            >
+              Pular este aluno
+            </button>
+          )}
         </div>
       ) : (
         <div>
-          <div className="rounded-2xl bg-surface p-4 shadow-soft">
-            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-text">
+          <div className="max-h-[40vh] overflow-y-auto rounded-2xl bg-surface p-4 shadow-soft">
+            <p className="whitespace-pre-wrap break-all text-[15px] leading-relaxed text-text">
               {mensagem}
             </p>
           </div>
@@ -405,6 +536,40 @@ function CobrarSheet({
           >
             Abrir WhatsApp
           </button>
+          <div className="mt-2 flex gap-2">
+            {pix && (
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(pix);
+                  setCopiado(true);
+                  setTimeout(() => setCopiado(false), 1600);
+                }}
+                className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-surface py-2.5 text-sm font-medium text-text-muted shadow-soft active:opacity-80"
+              >
+                <Copy size={14} />
+                {copiado ? "Copiado ✓" : "Copiar Pix"}
+              </button>
+            )}
+            <a
+              href={`/recibo/${item.alunoId}?mes=${mesRef}`}
+              target="_blank"
+              rel="noopener"
+              className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-surface py-2.5 text-sm font-medium text-text-muted shadow-soft active:opacity-80"
+            >
+              <ImageIcon size={14} />
+              Recibo em imagem
+            </a>
+          </div>
+          {onPular && (
+            <button
+              type="button"
+              onClick={onPular}
+              className="mt-2 w-full rounded-2xl py-2.5 text-sm font-medium text-text-muted active:bg-surface-soft"
+            >
+              Pular este aluno
+            </button>
+          )}
         </div>
       )}
     </Sheet>

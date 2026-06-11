@@ -45,7 +45,11 @@ export function BottomTabBar() {
                   active ? "text-accent" : "text-text-muted"
                 }`}
               >
-                <span className="relative">
+                <span
+                  className={`relative transition-transform duration-200 ${
+                    active ? "scale-110" : ""
+                  }`}
+                >
                   <Icon size={22} strokeWidth={active ? 2.4 : 2} />
                   {href === "/cobranca" && fimDeMes() && (
                     <span

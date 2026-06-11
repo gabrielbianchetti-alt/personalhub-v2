@@ -30,6 +30,8 @@ export interface CobrancaItemVM {
   ajusteMotivo: string | null;
   /** só por_aula — legenda "R$ X/aula" sob o valor-herói */
   valorAula: number | null;
+  /** quando a cobrança foi mandada — alimenta o follow-up de esquecidas */
+  enviadoEm: string | null;
   /** só créditos */
   saldo: number | null;
   ultimoPacote: { qtd: number; valor: number } | null;
@@ -87,6 +89,7 @@ export function montaItemFechamento(
     ajuste,
     ajusteMotivo: fechamento?.ajuste_motivo ?? null,
     valorAula: modo === "por_aula" ? Number(aluno.valor_mensal ?? 0) : null,
+    enviadoEm: fechamento?.enviado_em ?? null,
     saldo: null,
     ultimoPacote: null,
   };
@@ -112,6 +115,7 @@ export function montaItemCreditos(
     ajuste: 0,
     ajusteMotivo: null,
     valorAula: null,
+    enviadoEm: null,
     saldo,
     ultimoPacote,
   };

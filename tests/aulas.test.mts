@@ -19,6 +19,7 @@ import {
 } from "../src/lib/aulas.ts";
 import {
   addDias,
+  diffDias,
   dowDeIso,
   dataPorExtenso,
   dataCurta,
@@ -224,6 +225,14 @@ test("addDias atravessa mês, ano e fevereiro bissexto", () => {
   assert.equal(addDias("2025-02-28", 1), "2025-03-01");
   assert.equal(addDias("2026-06-11", -11), "2026-05-31");
   assert.equal(addDias("2026-01-01", -1), "2025-12-31");
+});
+
+test("diffDias atravessa mês e ano", () => {
+  assert.equal(diffDias("2026-06-08", "2026-06-11"), 3);
+  assert.equal(diffDias("2026-06-11", "2026-06-11"), 0);
+  assert.equal(diffDias("2026-05-30", "2026-06-02"), 3);
+  assert.equal(diffDias("2025-12-31", "2026-01-01"), 1);
+  assert.equal(diffDias("2026-06-11", "2026-06-08"), -3);
 });
 
 test("dowDeIso em datas conhecidas", () => {

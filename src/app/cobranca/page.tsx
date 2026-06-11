@@ -5,7 +5,6 @@ import { saldoCreditos } from "@/lib/aulas";
 import {
   montaItemCreditos,
   montaItemFechamento,
-  resumoMes,
   type CobrancaItemVM,
 } from "@/lib/cobranca";
 import { CobrancaLista } from "@/components/CobrancaLista";
@@ -24,8 +23,20 @@ export default async function CobrancaPage() {
       .order("nome"),
     buscaRegistros(supabase, { de: mesRef, ate: sp.iso }),
     supabase.from("fechamentos").select("*").eq("mes_referencia", mesRef),
-    supabase.from("professores").select("template_mensagem").single(),
+    supabase
+      .from("professores")
+      .select("template_mensagem, nome, chave_pix")
+      .single(),
   ]);
+  // Pré-migração 0006 (sem chave_pix): segue sem Pix em vez de quebrar.
+  const prof = profRes.error
+    ? {
+        ...(
+          await supabase.from("professores").select("template_mensagem, nome").single()
+        ).data,
+        chave_pix: null,
+      }
+    : profRes.data;
 
   const ativos = alunosRes.data ?? [];
   const fechamentos = new Map<string, Fechamento>(
@@ -81,18 +92,22 @@ export default async function CobrancaPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col px-5 pt-12">
-      <h1 className="font-display text-[2.5rem] leading-[1.05] text-text">Cobrança</h1>
-      <p className="mt-1 text-sm text-text-muted">
+    <div className="relative flex flex-1 flex-col px-5 pt-12">
+      <div className="camada-ambiente" aria-hidden="true">
+        <div className="aura" />
+      </div>
+      <h1 className="relative font-display text-[2.5rem] leading-[1.05] text-text">Cobrança</h1>
+      <p className="relative mt-1 text-sm text-text-muted">
         Fechamento de <span className="font-medium text-text">{nomeMes(sp.month)}</span>
       </p>
 
       <CobrancaLista
         itens={itens}
-        resumo={resumoMes(itens)}
         mesRef={mesRef}
         nomeMesAtual={nomeMes(sp.month)}
-        template={profRes.data?.template_mensagem ?? null}
+        template={prof?.template_mensagem ?? null}
+        chavePix={prof?.chave_pix ?? null}
+        nomeProfessor={prof?.nome ?? null}
       />
     </div>
   );

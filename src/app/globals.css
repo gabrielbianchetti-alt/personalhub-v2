@@ -71,30 +71,58 @@ body {
   -webkit-backdrop-filter: blur(20px);
 }
 
-/* Orbe-gradiente do header de Hoje — §6.4. Decorativo, varia com o período. */
-.orbe {
+/* ── Camadas de ambiente ─────────────────────────────────────────────
+   O orbe (assinatura do Hoje, §6.4) vive numa camada que cobre a PÁGINA
+   inteira (clipa só nas laterais) — nada de overflow-hidden no header
+   cortando o brilho com uma linha dura. O degradê morre sozinho. */
+.camada-ambiente {
   position: absolute;
-  top: -130px;
-  left: 50%;
-  width: 380px;
-  height: 300px;
-  transform: translateX(-50%);
-  border-radius: 9999px;
-  filter: blur(55px);
-  opacity: 0.55;
+  inset: 0;
+  overflow: hidden;
   pointer-events: none;
 }
+
+.orbe {
+  position: absolute;
+  top: -180px;
+  left: 50%;
+  width: 560px;
+  height: 460px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.5;
+}
+/* Paradas intermediárias suavizam o degradê (menos banding no escuro). */
 .orbe--manha {
-  /* manhã: laranja mais quente */
-  background: radial-gradient(circle, #F79A3C 0%, rgba(247, 154, 60, 0) 70%);
+  background: radial-gradient(closest-side, #F79A3C 0%, rgba(247, 154, 60, 0.45) 45%, rgba(247, 154, 60, 0) 78%);
 }
 .orbe--tarde {
-  /* tarde: coral (accent) */
-  background: radial-gradient(circle, #F26B3A 0%, rgba(242, 107, 58, 0) 70%);
+  background: radial-gradient(closest-side, #F26B3A 0%, rgba(242, 107, 58, 0.45) 45%, rgba(242, 107, 58, 0) 78%);
 }
 .orbe--noite {
-  /* noite: tons frios (§6.4) */
-  background: radial-gradient(circle, #5B7A99 0%, rgba(91, 122, 153, 0) 70%);
+  background: radial-gradient(closest-side, #5B7A99 0%, rgba(91, 122, 153, 0.4) 45%, rgba(91, 122, 153, 0) 78%);
+}
+[data-theme="dark"] .orbe {
+  opacity: 0.38;
+}
+
+/* Aura: respiração sutil das outras telas — parente discreto do orbe,
+   nunca competindo com a assinatura do Hoje. */
+.aura {
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  width: 480px;
+  height: 360px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.3;
+  background: radial-gradient(closest-side, var(--accent) 0%, rgba(242, 107, 58, 0.3) 45%, transparent 78%);
+}
+[data-theme="dark"] .aura {
+  opacity: 0.16;
 }
 
 /* Entrada suave de card extra adicionado */
@@ -104,6 +132,17 @@ body {
 }
 .card-in {
   animation: card-in 220ms ease-out;
+}
+
+/* Transição de entrada entre telas (template.tsx remonta a cada rota). */
+@media (prefers-reduced-motion: no-preference) {
+  .pagina-entra {
+    animation: pagina-entra 240ms ease-out;
+  }
+}
+@keyframes pagina-entra {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* Celebração discreta do "cobrança enviada" (§4.3 / §6.4) */
