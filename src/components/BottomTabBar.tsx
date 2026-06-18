@@ -30,38 +30,52 @@ export function BottomTabBar() {
   // Login e redefinição de senha não fazem parte da navegação do app.
   if (pathname === "/login" || pathname === "/atualizar-senha") return null;
 
+  // Índice do destino ativo → posição da pílula. -1 (ex.: /config) esconde.
+  const activeIdx = TABS.findIndex((t) => isActive(pathname, t.href));
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50">
       <div className="mx-auto w-full max-w-[430px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="glass flex items-stretch justify-around rounded-2xl border border-glass-border px-2 py-2 shadow-soft">
-          {TABS.map(({ href, label, icon: Icon }) => {
-            const active = isActive(pathname, href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={`flex flex-1 flex-col items-center gap-1 rounded-2xl py-1.5 text-xs transition-colors ${
-                  active ? "text-accent" : "text-text-muted"
-                }`}
-              >
-                <span
-                  className={`relative transition-transform duration-200 ${
-                    active ? "scale-110" : ""
+        <div className="glass rounded-2xl border border-glass-border px-2 py-2 shadow-soft">
+          <div className="relative flex items-stretch">
+            {/* Pílula que escorrega entre os 3 itens (decorativa). */}
+            <span
+              aria-hidden="true"
+              className="tab-indicador pointer-events-none absolute inset-y-0 left-0 w-[calc(100%/3)] rounded-xl bg-accent-soft"
+              style={{
+                transform: `translateX(${activeIdx * 100}%)`,
+                opacity: activeIdx === -1 ? 0 : 1,
+              }}
+            />
+            {TABS.map(({ href, label, icon: Icon }) => {
+              const active = isActive(pathname, href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-xs transition-colors ${
+                    active ? "text-accent" : "text-text-muted"
                   }`}
                 >
-                  <Icon size={22} strokeWidth={active ? 2.4 : 2} />
-                  {href === "/cobranca" && fimDeMes() && (
-                    <span
-                      aria-label="Fechamentos do mês prontos"
-                      className="absolute -right-1 -top-0.5 size-2 rounded-full bg-accent"
-                    />
-                  )}
-                </span>
-                <span className={active ? "font-medium" : ""}>{label}</span>
-              </Link>
-            );
-          })}
+                  <span
+                    className={`relative transition-transform duration-200 ${
+                      active ? "scale-110" : ""
+                    }`}
+                  >
+                    <Icon size={22} strokeWidth={active ? 2.4 : 2} />
+                    {href === "/cobranca" && fimDeMes() && (
+                      <span
+                        aria-label="Fechamentos do mês prontos"
+                        className="absolute -right-1 -top-0.5 size-2 rounded-full bg-accent"
+                      />
+                    )}
+                  </span>
+                  <span className={active ? "font-medium" : ""}>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
     </nav>
