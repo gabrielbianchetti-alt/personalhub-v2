@@ -36,12 +36,12 @@ export function BottomTabBar() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50">
       <div className="mx-auto w-full max-w-[430px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="glass rounded-2xl border border-glass-border px-2 py-2 shadow-soft">
+        <div className="glass rounded-full border border-glass-border px-2 py-2 shadow-soft">
           <div className="relative flex items-stretch">
             {/* Pílula que escorrega entre os 3 itens (decorativa). */}
             <span
               aria-hidden="true"
-              className="tab-indicador pointer-events-none absolute inset-y-0 left-0 w-[calc(100%/3)] rounded-xl bg-accent-soft"
+              className="tab-indicador pointer-events-none absolute inset-y-0 left-0 w-[calc(100%/3)] rounded-full bg-accent-soft"
               style={{
                 transform: `translateX(${activeIdx * 100}%)`,
                 opacity: activeIdx === -1 ? 0 : 1,
@@ -54,7 +54,7 @@ export function BottomTabBar() {
                   key={href}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-xs transition-colors ${
+                  className={`relative flex flex-1 flex-col items-center gap-1 rounded-full py-1.5 text-xs transition-colors ${
                     active ? "text-accent" : "text-text-muted"
                   }`}
                 >
