@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 import { BottomTabBar } from "@/components/BottomTabBar";
+import { SwipeAbas } from "@/components/SwipeAbas";
 
 // Identidade CARIMBO (§6.3): grotesk com opinião nos títulos…
 const schibsted = Schibsted_Grotesk({
@@ -27,6 +28,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Proporção fixa: sem zoom acidental (double-tap/pinch) — cara de app nativo.
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
     { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
@@ -55,7 +62,9 @@ export default function RootLayout({
         <div className="mesh-fundo" aria-hidden="true" />
         <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col">
           {/* pb folga pra não esconder conteúdo atrás da tab bar fixa */}
-          <main className="flex flex-1 flex-col pb-28">{children}</main>
+          <main className="flex flex-1 flex-col pb-28">
+            <SwipeAbas>{children}</SwipeAbas>
+          </main>
         </div>
         <BottomTabBar />
       </body>

@@ -3,12 +3,21 @@
 // Configurações (§4.4): atrás da engrenagem, fora da navegação principal.
 // Template de mensagem, tema e conta.
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { salvarConta } from "@/app/actions/conta";
 import { renderMensagem, TEMPLATE_PADRAO } from "@/lib/whatsapp";
 import { LogoutButton } from "./LogoutButton";
+
+// Variáveis que se auto-preenchem — o usuário toca pra inserir, sem digitar {}.
+const VARIAVEIS: Array<{ token: string; rotulo: string }> = [
+  { token: "{nome}", rotulo: "Nome" },
+  { token: "{valor}", rotulo: "Valor" },
+  { token: "{mes}", rotulo: "Mês" },
+  { token: "{aulas}", rotulo: "Aulas" },
+  { token: "{pix}", rotulo: "Pix" },
+];
 
 type Tema = "auto" | "claro" | "escuro";
 
@@ -36,8 +45,10 @@ export function ConfigClient({
   chavePix: string;
 }) {
   const [nome, setNome] = useState(nomeInicial);
-  const [template, setTemplate] = useState(templateInicial);
+  // Começa com o texto padrão já preenchido e editável (some a página em branco).
+  const [template, setTemplate] = useState(templateInicial || TEMPLATE_PADRAO);
   const [chavePix, setChavePix] = useState(chavePixInicial);
+  const taRef = useRef<HTMLTextAreaElement>(null);
   const [tema, setTema] = useState<Tema>("auto");
   const [salvo, setSalvo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -61,6 +72,25 @@ export function ConfigClient({
     setTema(t);
     localStorage.setItem("tema", t);
     aplicarTema(t);
+  };
+
+  // Insere a variável na posição do cursor (ou no fim) — sem o usuário digitar {}.
+  const inserirVar = (token: string) => {
+    setSalvo(false);
+    const ta = taRef.current;
+    if (!ta) {
+      setTemplate((t) => t + token);
+      return;
+    }
+    const ini = ta.selectionStart;
+    const fim = ta.selectionEnd;
+    const novo = template.slice(0, ini) + token + template.slice(fim);
+    setTemplate(novo);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = ini + token.length;
+      ta.setSelectionRange(pos, pos);
+    });
   };
 
   const preview = renderMensagem(template || null, {
@@ -101,25 +131,37 @@ export function ConfigClient({
           />
         </label>
 
-        <label className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
             Mensagem de cobrança
           </span>
           <textarea
+            ref={taRef}
             value={template}
             onChange={(e) => {
               setTemplate(e.target.value);
               setSalvo(false);
             }}
-            placeholder={TEMPLATE_PADRAO}
             rows={4}
-            className="resize-none rounded-xl bg-surface-soft px-3 py-2.5 text-[15px] leading-relaxed text-text outline-none placeholder:text-text-muted"
+            className="resize-none rounded-xl bg-surface-soft px-3 py-2.5 text-[15px] leading-relaxed text-text outline-none"
           />
           <span className="text-xs text-text-muted">
-            Use {"{nome}"}, {"{valor}"}, {"{mes}"}, {"{aulas}"} e {"{pix}"} —
-            preenchem sozinhos.
+            Toque para inserir os dados que se preenchem sozinhos:
           </span>
-        </label>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {VARIAVEIS.map((v) => (
+              <button
+                key={v.token}
+                type="button"
+                onClick={() => inserirVar(v.token)}
+                className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent active:opacity-80"
+              >
+                <Plus size={12} strokeWidth={2.6} />
+                {v.rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">

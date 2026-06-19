@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { buscaRegistros } from "@/lib/supabase/registros";
-import { agoraSP, mesRefIso, nomeMes } from "@/lib/datas";
+import { buscaRegistros, type RegistroLeve } from "@/lib/supabase/registros";
+import {
+  agoraSP,
+  diasNoMes,
+  isoDe,
+  mesRefIso,
+  nomeMes,
+  parteIso,
+} from "@/lib/datas";
 import { saldoCreditos } from "@/lib/aulas";
 import {
   montaItemCreditos,
@@ -8,12 +15,29 @@ import {
   type CobrancaItemVM,
 } from "@/lib/cobranca";
 import { CobrancaLista } from "@/components/CobrancaLista";
+import { MesNavegador } from "@/components/MesNavegador";
 import type { Fechamento } from "@/lib/tipos";
 
-export default async function CobrancaPage() {
+const MES_RE = /^\d{4}-\d{2}-01$/;
+
+export default async function CobrancaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string }>;
+}) {
   const supabase = await createClient();
   const sp = agoraSP();
-  const mesRef = mesRefIso(sp.year, sp.month);
+  const mesAtual = mesRefIso(sp.year, sp.month);
+
+  // Mês em foco: o corrente por padrão; ?mes= permite ver passado/futuro.
+  const { mes } = await searchParams;
+  const mesRef = mes && MES_RE.test(mes) ? mes : mesAtual;
+  const ehMesAtual = mesRef === mesAtual;
+  const { year, month } = parteIso(mesRef);
+  // Até quando contar exceções: hoje (mês corrente), fim do mês (passado),
+  // ou nada (futuro — projeção pura pelos dias fixos).
+  const fimMes = isoDe(year, month, diasNoMes(year, month));
+  const ateData = ehMesAtual ? sp.iso : mesRef > mesAtual ? mesRef : fimMes;
 
   const [alunosRes, registros, fechamentosRes, profRes] = await Promise.all([
     supabase
@@ -21,7 +45,9 @@ export default async function CobrancaPage() {
       .select("id, nome, telefone, valor_mensal, modo_cobranca, dias_semana")
       .eq("status", "ativo")
       .order("nome"),
-    buscaRegistros(supabase, { de: mesRef, ate: sp.iso }),
+    mesRef > mesAtual
+      ? Promise.resolve<RegistroLeve[]>([]) // futuro: projeção pura pelos dias fixos
+      : buscaRegistros(supabase, { de: mesRef, ate: ateData }),
     supabase.from("fechamentos").select("*").eq("mes_referencia", mesRef),
     supabase
       .from("professores")
@@ -54,8 +80,8 @@ export default async function CobrancaPage() {
           aluno,
           registros.filter((r) => r.aluno_id === aluno.id),
           fechamentos.get(aluno.id) ?? null,
-          sp.year,
-          sp.month,
+          year,
+          month,
         ),
       );
     } else {
@@ -85,7 +111,7 @@ export default async function CobrancaPage() {
       buscaRegistros(supabase, {
         alunoId: a.id,
         depoisDe: pacote.created_at.slice(0, 10),
-        ate: sp.iso,
+        ate: ateData,
       }),
     ),
   );
@@ -99,7 +125,7 @@ export default async function CobrancaPage() {
           qtdCompradas: pacote.qtd_aulas,
           diasSemana: a.dias_semana,
           compraIso,
-          hojeIso: sp.iso,
+          hojeIso: ateData,
           registros: regsCredito[i],
         }),
         { qtd: pacote.qtd_aulas, valor: Number(pacote.valor) },
@@ -122,14 +148,18 @@ export default async function CobrancaPage() {
         <div className="aura" />
       </div>
       <h1 className="relative font-display text-[2.5rem] leading-[1.05] text-text">Cobrança</h1>
-      <p className="relative mt-1 text-sm text-text-muted">
-        Fechamento de <span className="font-medium text-text">{nomeMes(sp.month)}</span>
-      </p>
+      <MesNavegador
+        mesRef={mesRef}
+        rotulo={`${nomeMes(month)}${year !== sp.year ? ` ${year}` : ""}`}
+        ehMesAtual={ehMesAtual}
+      />
 
       <CobrancaLista
+        key={mesRef}
         itens={itens}
         mesRef={mesRef}
-        nomeMesAtual={nomeMes(sp.month)}
+        nomeMesAtual={nomeMes(month)}
+        somenteLeitura={!ehMesAtual}
         template={prof?.template_mensagem ?? null}
         chavePix={prof?.chave_pix ?? null}
         nomeProfessor={prof?.nome ?? null}

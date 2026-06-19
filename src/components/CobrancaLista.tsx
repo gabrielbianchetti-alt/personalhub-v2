@@ -61,6 +61,7 @@ export function CobrancaLista({
   itens,
   mesRef,
   nomeMesAtual,
+  somenteLeitura = false,
   template,
   chavePix,
   nomeProfessor,
@@ -68,6 +69,7 @@ export function CobrancaLista({
   itens: CobrancaItemVM[];
   mesRef: string;
   nomeMesAtual: string;
+  somenteLeitura?: boolean;
   template: string | null;
   chavePix: string | null;
   nomeProfessor: string | null;
@@ -226,7 +228,7 @@ export function CobrancaLista({
             )}
           </p>
         </div>
-        {resumo.abertos > 0 && (
+        {!somenteLeitura && resumo.abertos > 0 && (
           <button
             type="button"
             onClick={iniciarFechamentoGuiado}
@@ -297,7 +299,8 @@ export function CobrancaLista({
                 </div>
               </div>
 
-              {/* divisor pontilhado de recibo entre o extrato e as ações */}
+              {/* Em prévia (mês ≠ corrente) não há ações — só os valores. */}
+              {!somenteLeitura && (
               <div className="divisor-recibo mt-3 flex items-center gap-2 pt-3">
                 {item.modo !== "creditos" ? (
                   <>
@@ -368,6 +371,7 @@ export function CobrancaLista({
                   </button>
                 )}
               </div>
+              )}
             </li>
           );
         })}

@@ -60,8 +60,8 @@ export function BottomTabBar() {
                   }`}
                 >
                   <span
-                    className={`relative transition-transform duration-200 ${
-                      active ? "scale-110" : ""
+                    className={`relative transition-transform duration-[420ms] ease-[cubic-bezier(0.34,1.3,0.5,1)] ${
+                      active ? "-translate-y-0.5 scale-110" : ""
                     }`}
                   >
                     <Icon size={22} strokeWidth={active ? 2.4 : 2} />

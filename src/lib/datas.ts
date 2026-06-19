@@ -85,6 +85,13 @@ export function mesRefIso(year: number, month0: number): string {
   return isoDe(year, month0, 1);
 }
 
+/** Soma n meses a um "YYYY-MM-01" (navegação de meses na Cobrança). */
+export function addMeses(mesRefIso: string, n: number): string {
+  const { year, month } = parteIso(mesRefIso);
+  const d = new Date(Date.UTC(year, month + n, 1));
+  return isoDe(d.getUTCFullYear(), d.getUTCMonth(), 1);
+}
+
 // ── Rótulos PT-BR (sem depender do fuso/locale do runtime) ─────────
 
 const SEMANA_LONGA = [
