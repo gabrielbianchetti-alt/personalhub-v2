@@ -70,14 +70,14 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* Dinheiro: fonte do SISTEMA (no iPhone = SF Pro, cara da Apple) em vez do
-   mono — o zero do IBM Plex Mono tinha um ponto no meio que ficava estranho.
-   tabular-nums mantém as colunas de valores alinhadas. */
+/* Dinheiro: mono tabular (Geist Mono) — a assinatura nº1 da marca (§6.3),
+   "tique de fintech que nenhum template usa". Zero limpo, sem o ponto do IBM
+   Plex Mono. tabular-nums mantém as colunas de valores alinhadas. */
 .font-money {
-  font-family: -apple-system, system-ui, "SF Pro Display", "Segoe UI", sans-serif;
+  font-family: var(--font-money), ui-monospace, "SF Mono", "Cascadia Mono", monospace;
   font-variant-numeric: tabular-nums lining-nums;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 /* Selo de carimbo — "PAGO" estampado no card quitado e no recibo. */
@@ -95,6 +95,14 @@ body {
   opacity: 0.9;
   /* tinta de carimbo: leve falha de impressão */
   mask-image: radial-gradient(circle at 30% 60%, black 92%, rgba(0,0,0,0.55) 100%);
+}
+/* Carimbo grande — payoff de marca nas celebrações (enviado / mês fechado). */
+.selo-grande {
+  font-size: 1.05rem;
+  letter-spacing: 0.18em;
+  padding: 7px 18px;
+  border-width: 3px;
+  border-radius: 8px;
 }
 
 /* Divisor pontilhado de recibo (entre o resumo e as ações do card). */

@@ -102,19 +102,21 @@ export function montaAlunosHoje(
 export function montaPendencias(args: {
   hojeIso: string;
   ativos: Pick<Aluno, "id" | "nome" | "dias_semana" | "created_at">[];
-  registrosJanela: Pick<RegistroAula, "data">[];
   diasResolvidos: string[];
   professorDesdeIso: string;
 }): PendenciaVM[] {
-  const { hojeIso, ativos, registrosJanela, diasResolvidos, professorDesdeIso } = args;
-  const diasComRegistro = new Set(registrosJanela.map((r) => r.data));
+  const { hojeIso, ativos, diasResolvidos, professorDesdeIso } = args;
+  // Um dia só sai da pergunta quando é CONFIRMADO explicitamente
+  // (dias_resolvidos). Marcar uma falta avulsa no Hoje NÃO resolve o dia —
+  // senão os outros faltantes daquele dia entrariam como presumidos-fizeram
+  // (furo que cobra errado). A confirmação preserva as exceções já marcadas.
   const resolvidos = new Set(diasResolvidos);
   const pendencias: PendenciaVM[] = [];
 
   for (let i = 1; i <= 7; i++) {
     const dia = addDias(hojeIso, -i);
     if (dia < professorDesdeIso) break;
-    if (diasComRegistro.has(dia) || resolvidos.has(dia)) continue;
+    if (resolvidos.has(dia)) continue;
     const dow = dowDeIso(dia);
     const esperados = ativos
       .filter(

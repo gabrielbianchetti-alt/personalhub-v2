@@ -5,6 +5,7 @@ import { buscaRegistros, buscaAulasPacote } from "@/lib/supabase/registros";
 import { agoraSP, addDias, dataPorExtenso } from "@/lib/datas";
 import { montaAlunosHoje, montaPendencias } from "@/lib/hoje";
 import { CheckinList } from "@/components/CheckinList";
+import { OnboardingBanner } from "@/components/OnboardingBanner";
 
 // Primeiro nome pra saudação. Se o nome ainda é o e-mail (default do trigger
 // no signup), usa a parte antes do @ — "gabriel@..." vira "Gabriel".
@@ -31,7 +32,7 @@ export default async function HojePage() {
       buscaRegistros(supabase, { de: janelaInicio, ate: sp.iso }),
       buscaAulasPacote(supabase, { de: sp.iso, ate: sp.iso }), // aulas de pacote de hoje
       supabase.from("dias_resolvidos").select("data").gte("data", janelaInicio),
-      supabase.from("professores").select("created_at, nome").single(),
+      supabase.from("professores").select("created_at, nome, chave_pix").single(),
     ]);
 
   const ativos = alunosRes.data ?? [];
@@ -49,7 +50,6 @@ export default async function HojePage() {
     : montaPendencias({
         hojeIso: sp.iso,
         ativos,
-        registrosJanela: registros.filter((r) => r.data < sp.iso),
         diasResolvidos: (resolvidosRes.data ?? []).map((d) => d.data),
         professorDesdeIso: (profRes.data?.created_at ?? sp.iso).slice(0, 10),
       });
@@ -57,7 +57,11 @@ export default async function HojePage() {
   const periodo = sp.hour < 12 ? "manha" : sp.hour < 18 ? "tarde" : "noite";
   const saudacao =
     periodo === "manha" ? "Bom dia" : periodo === "tarde" ? "Boa tarde" : "Boa noite";
-  const nome = primeiroNome(profRes.data?.nome ?? null);
+  const nomeRaw = profRes.data?.nome ?? null;
+  const nome = primeiroNome(nomeRaw);
+  // Onboarding: nome ainda é o e-mail (default do trigger) ou Pix vazio.
+  const precisaNome = !nomeRaw || nomeRaw.includes("@");
+  const precisaPix = !profRes.data?.chave_pix;
 
   return (
     <div className="relative flex flex-1 flex-col">
@@ -82,6 +86,8 @@ export default async function HojePage() {
           {dataPorExtenso(sp.iso)}
         </h1>
       </header>
+
+      <OnboardingBanner precisaNome={precisaNome} precisaPix={precisaPix} />
 
       <CheckinList
         hojeIso={sp.iso}

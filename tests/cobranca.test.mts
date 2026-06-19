@@ -145,4 +145,26 @@ test("resumoMes soma mensalidade + por_aula e deixa créditos de fora", () => {
   assert.equal(r.totalPrevisto, 300 + 720);
   assert.equal(r.abertos, 2);
   assert.equal(r.pagos, 0);
+  assert.equal(r.totalRecebido, 0);
+});
+
+test("resumoMes.totalRecebido soma só os fechamentos pagos", () => {
+  const pago = montaItemFechamento(
+    { ...ALUNO_BASE, valor_mensal: 300, modo_cobranca: "mensalidade" as const },
+    [],
+    fechamentoCongelado({ status: "pago", valor_final: 300 }),
+    2026,
+    5,
+  );
+  const aberto = montaItemFechamento(
+    { ...ALUNO_BASE, id: "a2", valor_mensal: 250, modo_cobranca: "mensalidade" as const },
+    [],
+    null,
+    2026,
+    5,
+  );
+  const r = resumoMes([pago, aberto]);
+  assert.equal(r.totalPrevisto, 300 + 250);
+  assert.equal(r.totalRecebido, 300); // só o pago
+  assert.equal(r.pagos, 1);
 });

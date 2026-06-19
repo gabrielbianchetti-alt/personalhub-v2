@@ -130,6 +130,7 @@ export function montaItemCreditos(
 
 export interface ResumoMesVM {
   totalPrevisto: number;
+  totalRecebido: number; // soma do que já foi pago — "quanto entrou"
   abertos: number;
   enviados: number;
   pagos: number;
@@ -140,6 +141,9 @@ export function resumoMes(itens: CobrancaItemVM[]): ResumoMesVM {
   const fecham = itens.filter((i) => i.modo !== "creditos");
   return {
     totalPrevisto: fecham.reduce((s, i) => s + i.valor, 0),
+    totalRecebido: fecham
+      .filter((i) => i.status === "pago")
+      .reduce((s, i) => s + i.valor, 0),
     abertos: fecham.filter((i) => i.status === "aberto").length,
     enviados: fecham.filter((i) => i.status === "enviado").length,
     pagos: fecham.filter((i) => i.status === "pago").length,

@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, useTransition } from "react";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import type { AlunoHojeVM, PendenciaVM, RosterVM } from "@/lib/hoje";
 import {
@@ -133,13 +134,30 @@ export function CheckinList({
       )}
 
       {alunos.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-8 py-24 text-center">
-          <p className="font-display text-2xl leading-snug text-text">
-            Sem alunos hoje.
-            <br />
-            Bom descanso 👊
-          </p>
-        </div>
+        roster.length === 0 ? (
+          // Conta nova, zero alunos: onboarding (não mente "bom descanso").
+          <div className="flex flex-1 flex-col items-center justify-center px-8 py-20 text-center">
+            <p className="font-display text-2xl leading-snug text-text">
+              Comece cadastrando
+              <br />
+              seus alunos 👊
+            </p>
+            <Link
+              href="/alunos/novo"
+              className="mt-6 rounded-full bg-accent px-6 py-3 font-medium text-accent-contrast shadow-soft active:opacity-90"
+            >
+              Cadastrar alunos
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center px-8 py-24 text-center">
+            <p className="font-display text-2xl leading-snug text-text">
+              Sem alunos hoje.
+              <br />
+              Bom descanso 👊
+            </p>
+          </div>
+        )
       ) : (
         <section className="flex flex-col gap-3 px-5">
           {itens.map((item, i) => (

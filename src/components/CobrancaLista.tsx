@@ -84,10 +84,22 @@ export function CobrancaLista({
   const [celebrando, setCelebrando] = useState<string | null>(null);
   const [festa, setFesta] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Snackbar reutilizável: undo do "Pago" e confirmação leve do "Reabrir".
+  const [toast, setToast] = useState<
+    { msg: string; acao?: { rotulo: string; fn: () => void } } | null
+  >(null);
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Resumo ao vivo: acompanha os status otimistas desta sessão.
   const resumo = resumoMes(lista);
+  const pctRecebido =
+    resumo.totalPrevisto > 0 ? resumo.totalRecebido / resumo.totalPrevisto : 0;
   // Item do sheet resolvido na renderização — sempre fresco (telefone, status).
   const sheetItem = sheet ? (lista.find((i) => i.alunoId === sheet.alunoId) ?? null) : null;
 
@@ -164,15 +176,38 @@ export function CobrancaLista({
       () => marcarPago(item.alunoId, mesRef),
       () => setStatus(item.alunoId, statusAnterior),
     );
+    // Fecha o loop de feedback do "Pago" (que não tinha celebração) + undo.
+    setToast({
+      msg: `${primeiroNome(item.nome)} · marcado pago`,
+      acao: {
+        rotulo: "Desfazer",
+        fn: () => {
+          setStatus(item.alunoId, statusAnterior);
+          persistir(
+            () => reabrirFechamento(item.alunoId, mesRef),
+            () => setStatus(item.alunoId, "pago"),
+          );
+        },
+      },
+    });
   };
 
+  // Reabrir derrete o snapshot e pode recalcular um valor já quitado — então
+  // pede confirmação leve (no próprio snackbar) em vez de agir no 1º toque.
   const aoReabrir = (item: CobrancaItemVM) => {
-    const statusAnterior = item.status;
-    setStatus(item.alunoId, "aberto");
-    persistir(
-      () => reabrirFechamento(item.alunoId, mesRef),
-      () => setStatus(item.alunoId, statusAnterior),
-    );
+    setToast({
+      msg: `Reabrir ${primeiroNome(item.nome)}? O valor pode recalcular.`,
+      acao: {
+        rotulo: "Reabrir",
+        fn: () => {
+          setStatus(item.alunoId, "aberto");
+          persistir(
+            () => reabrirFechamento(item.alunoId, mesRef),
+            () => setStatus(item.alunoId, "pago"),
+          );
+        },
+      },
+    });
   };
 
   if (lista.length === 0) {
@@ -195,12 +230,35 @@ export function CobrancaLista({
 
   return (
     <>
+      {toast && (
+        <Portal>
+          <div className="fixed inset-x-0 bottom-24 z-[65] mx-auto flex max-w-[430px] px-4">
+            <div className="flex w-full items-center justify-between gap-3 rounded-2xl bg-text px-4 py-3 text-bg shadow-soft">
+              <span className="text-sm leading-snug">{toast.msg}</span>
+              {toast.acao && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fn = toast.acao!.fn;
+                    setToast(null);
+                    fn();
+                  }}
+                  className="shrink-0 text-sm font-semibold underline underline-offset-2 active:opacity-70"
+                >
+                  {toast.acao.rotulo}
+                </button>
+              )}
+            </div>
+          </div>
+        </Portal>
+      )}
+
       {festa && (
         <Portal>
           <div className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center">
-            <p className="glass rounded-2xl border border-glass-border px-8 py-5 font-display text-2xl text-text shadow-soft">
-              Mês fechado 👊
-            </p>
+            <div className="glass rounded-2xl border border-glass-border px-9 py-7 shadow-soft">
+              <span className="selo selo-grande text-accent">Mês fechado</span>
+            </div>
           </div>
         </Portal>
       )}
@@ -237,6 +295,26 @@ export function CobrancaLista({
             )}
           </p>
         </div>
+        {/* Recebido x previsto — "quanto já entrou", a pergunta do fim do mês.
+            Verde = confirmação (mesma semântica do selo Pago), não dado solto. */}
+        {resumo.totalRecebido > 0 && (
+          <div className="mt-2.5">
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+                Recebido
+              </span>
+              <span className="font-money text-sm font-semibold text-success">
+                {formatBRL(resumo.totalRecebido)}
+              </span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-soft">
+              <div
+                className="h-full rounded-full bg-success transition-[width] duration-500"
+                style={{ width: `${Math.round(pctRecebido * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
         {!somenteLeitura && resumo.abertos > 0 && (
           <button
             type="button"
@@ -266,7 +344,7 @@ export function CobrancaLista({
             >
               {celebrando === item.alunoId && (
                 <div className="celebra pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[14px] bg-surface/80">
-                  <p className="font-display text-xl text-success">Cobrança enviada ✓</p>
+                  <span className="selo selo-grande text-success">Enviado</span>
                 </div>
               )}
 
