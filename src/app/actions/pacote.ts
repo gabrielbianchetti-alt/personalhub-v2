@@ -9,6 +9,7 @@ import { agoraSP, addDias } from "@/lib/datas";
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 const HORA_RE = /^\d{2}:\d{2}$/;
+const FUTURO_MAX = 365; // dias à frente que dá pra agendar
 
 async function professorAtual() {
   const supabase = await createClient();
@@ -19,7 +20,7 @@ async function professorAtual() {
   return { supabase, professorId: user.id };
 }
 
-/** Marca/agenda uma aula do pacote. data pode ser hoje ou futuro. */
+/** Marca/agenda aula do pacote: passada (esqueceu de marcar), hoje ou futura. */
 export async function agendarAulaPacote(
   alunoId: string,
   dataIso: string,
@@ -27,7 +28,7 @@ export async function agendarAulaPacote(
 ) {
   if (!ISO_RE.test(dataIso)) throw new Error("Data inválida.");
   const hoje = agoraSP().iso;
-  if (dataIso < addDias(hoje, -7)) throw new Error("Data muito antiga.");
+  if (dataIso > addDias(hoje, FUTURO_MAX)) throw new Error("Data muito distante.");
   const hora = HORA_RE.test(horario) ? horario : null;
 
   const { supabase, professorId } = await professorAtual();
@@ -41,6 +42,9 @@ export async function agendarAulaPacote(
     .limit(1)
     .maybeSingle();
   if (!pacote) throw new Error("Esse aluno ainda não tem um pacote. Venda um na Cobrança.");
+  // Retroativo: pode marcar desde a compra do pacote (não antes dele existir).
+  const compraIso = pacote.created_at.slice(0, 10);
+  if (dataIso < compraIso) throw new Error("Anterior à compra do pacote.");
 
   const { count } = await supabase
     .from("registros_aula")

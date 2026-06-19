@@ -15,6 +15,7 @@ import {
 import { agendarAulaPacote, cancelarAulaPacote } from "@/app/actions/pacote";
 import { DiasHorarios } from "@/components/DiasHorarios";
 import { ProgressRing } from "@/components/ProgressRing";
+import { Sheet } from "@/components/Sheet";
 import { dataCurta, horarioCurto } from "@/lib/datas";
 import type { ProgressoPacote } from "@/lib/aulas";
 import type { ModoCobranca, AlunoStatus } from "@/lib/tipos";
@@ -291,7 +292,8 @@ export function AlunoPerfil({
   );
 }
 
-// ── Painel do pacote: progresso (anel) + agendar aula + lista c/ cancelar ──
+// ── Painel do pacote: SÓ status (anel) + botão que abre o sheet de marcar.
+//    A marcação fica separada da configuração do aluno (sheet dedicado). ──
 function PacotePainel({
   alunoId,
   progresso,
@@ -302,6 +304,66 @@ function PacotePainel({
   progresso: ProgressoPacote | null;
   aulas: AulaPacoteVM[];
   temPacote: boolean;
+}) {
+  const [sheetAberto, setSheetAberto] = useState(false);
+
+  if (!temPacote) {
+    return (
+      <div className="mt-4 rounded-[14px] bg-surface p-4 text-sm text-text-muted shadow-soft">
+        Sem pacote ativo. Venda o primeiro pacote na aba{" "}
+        <strong className="text-text">Cobrança</strong>.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-[14px] bg-surface p-4 shadow-soft">
+      {progresso && (
+        <div className="flex items-center gap-3">
+          <ProgressRing usadas={progresso.usadas} qtd={progresso.qtd} size={52} />
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-text">
+              {progresso.restantes}{" "}
+              {progresso.restantes === 1 ? "aula livre" : "aulas livres"}
+            </p>
+            <p className="text-sm text-text-muted">
+              {progresso.usadas} feita{progresso.usadas === 1 ? "" : "s"}
+              {progresso.agendadas > 0 &&
+                ` · ${progresso.agendadas} agendada${progresso.agendadas === 1 ? "" : "s"}`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setSheetAberto(true)}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3 font-medium text-accent-contrast active:opacity-90"
+      >
+        <Plus size={18} strokeWidth={2.4} />
+        Marcar aula
+      </button>
+
+      {sheetAberto && (
+        <MarcarAulaPacoteSheet
+          alunoId={alunoId}
+          aulas={aulas}
+          onClose={() => setSheetAberto(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Sheet dedicado de marcação — fora da configuração do aluno.
+function MarcarAulaPacoteSheet({
+  alunoId,
+  aulas,
+  onClose,
+}: {
+  alunoId: string;
+  aulas: AulaPacoteVM[];
+  onClose: () => void;
 }) {
   const router = useRouter();
   const [data, setData] = useState("");
@@ -338,85 +400,77 @@ function PacotePainel({
       }
     });
 
-  if (!temPacote) {
-    return (
-      <div className="mt-4 rounded-[14px] bg-surface p-4 text-sm text-text-muted shadow-soft">
-        Sem pacote ativo. Venda o primeiro pacote na aba <strong className="text-text">Cobrança</strong>.
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-4 flex flex-col gap-4 rounded-[14px] bg-surface p-4 shadow-soft">
-      {progresso && (
-        <div className="flex items-center gap-3">
-          <ProgressRing usadas={progresso.usadas} qtd={progresso.qtd} size={52} />
-          <div className="min-w-0">
-            <p className="text-[15px] font-medium text-text">
-              {progresso.restantes}{" "}
-              {progresso.restantes === 1 ? "aula livre" : "aulas livres"}
-            </p>
-            <p className="text-sm text-text-muted">
-              {progresso.usadas} feita{progresso.usadas === 1 ? "" : "s"}
-              {progresso.agendadas > 0 && ` · ${progresso.agendadas} agendada${progresso.agendadas === 1 ? "" : "s"}`}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Agendar aula: dia + hora → aparece no Hoje no dia certo. */}
-      <div className="flex items-center gap-2">
-        <input
-          type="date"
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          aria-label="Dia da aula"
-          className="min-w-0 flex-1 rounded-xl bg-surface-soft px-3 py-2.5 text-sm text-text outline-none"
-        />
-        <input
-          type="time"
-          value={hora}
-          onChange={(e) => setHora(e.target.value)}
-          aria-label="Horário da aula"
-          className="shrink-0 rounded-xl bg-surface-soft px-2.5 py-2.5 text-sm text-text outline-none"
-        />
-        <button
-          type="button"
-          disabled={pending}
-          onClick={agendar}
-          aria-label="Marcar aula"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-contrast active:opacity-90 disabled:opacity-60"
-        >
-          <Plus size={20} strokeWidth={2.4} />
-        </button>
+    <Sheet open title="Marcar aula" onClose={onClose}>
+      <div className="flex items-end gap-2">
+        <label className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Dia
+          </span>
+          <input
+            type="date"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            className="w-full min-w-0 rounded-xl bg-surface px-3 py-2.5 text-sm text-text shadow-soft outline-none"
+          />
+        </label>
+        <label className="flex shrink-0 flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Hora
+          </span>
+          <input
+            type="time"
+            value={hora}
+            onChange={(e) => setHora(e.target.value)}
+            className="rounded-xl bg-surface px-2.5 py-2.5 text-sm text-text shadow-soft outline-none"
+          />
+        </label>
       </div>
+      <p className="mt-1.5 text-xs text-text-muted">
+        Pode marcar aula de hoje, agendar pra frente ou lançar uma passada (se
+        esqueceu no dia). Aparece no Hoje no dia certo.
+      </p>
 
-      {erro && <p className="text-sm text-danger">{erro}</p>}
+      {erro && <p className="mt-2 text-sm text-danger">{erro}</p>}
+
+      <button
+        type="button"
+        disabled={pending}
+        onClick={agendar}
+        className="mt-3 w-full rounded-2xl bg-accent py-3 font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
+      >
+        {pending ? "Salvando…" : "Marcar aula"}
+      </button>
 
       {aulas.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {aulas.map((a) => (
-            <li
-              key={a.id}
-              className="flex items-center justify-between rounded-xl bg-surface-soft px-3 py-2"
-            >
-              <span className="text-sm text-text">
-                {dataCurta(a.data)}
-                {a.horario && ` · ${a.horario}`}
-              </span>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => cancelar(a.id)}
-                aria-label="Cancelar aula"
-                className="-m-2 p-2 text-text-muted active:text-danger disabled:opacity-60"
+        <>
+          <p className="mt-4 mb-1.5 text-xs font-medium uppercase tracking-wider text-text-muted">
+            Aulas marcadas
+          </p>
+          <ul className="flex max-h-[32vh] flex-col gap-1 overflow-y-auto">
+            {aulas.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between rounded-xl bg-surface px-3 py-2 shadow-soft"
               >
-                <X size={16} />
-              </button>
-            </li>
-          ))}
-        </ul>
+                <span className="text-sm text-text">
+                  {dataCurta(a.data)}
+                  {a.horario && ` · ${a.horario}`}
+                </span>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => cancelar(a.id)}
+                  aria-label="Cancelar aula"
+                  className="-m-2 p-2 text-text-muted active:text-danger disabled:opacity-60"
+                >
+                  <X size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
-    </div>
+    </Sheet>
   );
 }
