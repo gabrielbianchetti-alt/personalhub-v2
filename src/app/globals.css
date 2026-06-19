@@ -102,6 +102,40 @@ body {
   border-top: 1px dashed color-mix(in srgb, var(--text) 16%, transparent);
 }
 
+/* ── Mesh de fundo (§6.4) — fixo na viewport, atrás de tudo ──────────
+   Blobs sutis SÓ em matizes do teal-petróleo sobre o papel frio: dá
+   profundidade pro glass refratar, sem virar o arco-íris "cara de IA".
+   Estático (app financeiro — zero animação/repaint). */
+.mesh-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 85% 0%, rgba(11, 122, 102, 0.10) 0%, transparent 70%),
+    radial-gradient(55% 45% at 0% 100%, rgba(47, 179, 154, 0.08) 0%, transparent 70%),
+    radial-gradient(70% 60% at 50% 120%, rgba(52, 85, 122, 0.06) 0%, transparent 70%),
+    var(--bg);
+}
+/* Grão de papel (~2,5%): mata banding e reforça a textura CARIMBO. */
+.mesh-fundo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .mesh-fundo {
+  background:
+    radial-gradient(60% 50% at 85% 0%, rgba(53, 208, 174, 0.07) 0%, transparent 70%),
+    radial-gradient(55% 45% at 0% 100%, rgba(11, 122, 102, 0.10) 0%, transparent 70%),
+    radial-gradient(70% 60% at 50% 120%, rgba(52, 85, 122, 0.08) 0%, transparent 70%),
+    var(--bg);
+}
+[data-theme="dark"] .mesh-fundo::after {
+  opacity: 0.02;
+}
+
 /* Glass cirúrgico — §6.4 (tab bar, sheets, resumo da Cobrança).
    Só a propriedade padrão: com o par prefixado junto, o Lightning CSS
    descartava a declaração inteira e o glass ficava sem desfoque. */
@@ -203,6 +237,36 @@ body {
 }
 .card-in {
   animation: card-in 220ms ease-out;
+}
+
+/* Skeleton de carregamento (loading.tsx) — placeholder com shimmer. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 60%, transparent),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
 }
 
 /* Transição de entrada entre telas (template.tsx remonta a cada rota). */

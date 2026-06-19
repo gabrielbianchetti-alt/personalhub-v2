@@ -53,6 +53,7 @@ export function BottomTabBar() {
                 <Link
                   key={href}
                   href={href}
+                  prefetch
                   aria-current={active ? "page" : undefined}
                   className={`relative flex flex-1 flex-col items-center gap-1 rounded-full py-1.5 text-xs transition-colors ${
                     active ? "text-accent" : "text-text-muted"

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
+import { IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 import { BottomTabBar } from "@/components/BottomTabBar";
 
@@ -8,17 +8,11 @@ const schibsted = Schibsted_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
 });
-// …sans funcional no corpo…
+// …sans funcional no corpo (os números R$ usam a fonte do sistema = SF Pro).
 const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
-});
-// …e MONO em todo valor R$ — o tique de fintech que vira assinatura.
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -49,13 +43,16 @@ export default function RootLayout({
     // suppressHydrationWarning: o script de tema muda data-theme antes do React.
     <html
       lang="pt-BR"
-      className={`${schibsted.variable} ${plexSans.variable} ${plexMono.variable}`}
+      className={`${schibsted.variable} ${plexSans.variable}`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: TEMA_SCRIPT }} />
       </head>
       <body className="min-h-dvh antialiased">
+        {/* Mesh de fundo fixo na viewport — dá profundidade pro glass
+            (a tab bar/sheets passam a ter o que refratar). */}
+        <div className="mesh-fundo" aria-hidden="true" />
         <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col">
           {/* pb folga pra não esconder conteúdo atrás da tab bar fixa */}
           <main className="flex flex-1 flex-col pb-28">{children}</main>
