@@ -21,14 +21,24 @@ export default function LoginPage() {
     setErro(null);
     setAviso(null);
     setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    });
-    setLoading(false);
-    if (error) return setErro(error.message);
-    irProApp();
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: senha,
+      });
+      if (error) {
+        setErro(error.message);
+        return;
+      }
+      irProApp();
+    } catch (e) {
+      // fetch pode LANÇAR (ex.: extensão grampeando headers) — nunca
+      // deixar o clique morrer em silêncio.
+      setErro(e instanceof Error ? e.message : "Não consegui entrar — tente de novo.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function esqueciSenha() {
@@ -52,16 +62,21 @@ export default function LoginPage() {
     setErro(null);
     setAviso(null);
     setLoading(true);
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: senha,
-    });
-    setLoading(false);
-    if (error) return setErro(error.message);
-    // Sem confirmação de email → já vem com sessão. Com confirmação → avisa.
-    if (data.session) irProApp();
-    else setAviso("Conta criada. Confirme pelo email para entrar.");
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signUp({ email, password: senha });
+      if (error) {
+        setErro(error.message);
+        return;
+      }
+      // Sem confirmação de email → já vem com sessão. Com confirmação → avisa.
+      if (data.session) irProApp();
+      else setAviso("Conta criada. Confirme pelo email para entrar.");
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não consegui criar a conta — tente de novo.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
