@@ -145,3 +145,10 @@ export function formatBRL(valor: number): string {
     currency: "BRL",
   }).format(valor);
 }
+
+/** "2, 4, 9 e 11" — lista legível de dias do mês (placeholder {dias}). */
+export function listaDias(dias: number[]): string {
+  if (dias.length === 0) return "";
+  if (dias.length === 1) return String(dias[0]);
+  return `${dias.slice(0, -1).join(", ")} e ${dias[dias.length - 1]}`;
+}

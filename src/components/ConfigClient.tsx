@@ -16,6 +16,7 @@ const VARIAVEIS: Array<{ token: string; rotulo: string }> = [
   { token: "{valor}", rotulo: "Valor" },
   { token: "{mes}", rotulo: "Mês" },
   { token: "{aulas}", rotulo: "Aulas" },
+  { token: "{dias}", rotulo: "Dias" },
   { token: "{pix}", rotulo: "Pix" },
 ];
 
@@ -98,6 +99,7 @@ export function ConfigClient({
     valor: "R$ 300,00",
     mes: "junho",
     aulas: "12 aulas · 1 falta · 2 extras",
+    dias: "2, 4, 9, 11, 16, 18, 23, 25 e 30",
   });
 
   return (

@@ -21,6 +21,7 @@ export interface DadosMensagem {
   mes: string; // "junho"
   aulas: string; // "12 aulas · 1 falta · 2 extras"
   pix?: string; // chave Pix do professor — placeholder {pix}
+  dias?: string; // "2, 4, 9 … e 30" — dias de aula no mês, placeholder {dias}
 }
 
 export function renderMensagem(template: string | null, dados: DadosMensagem): string {
@@ -30,7 +31,8 @@ export function renderMensagem(template: string | null, dados: DadosMensagem): s
     .replaceAll("{valor}", dados.valor)
     .replaceAll("{mes}", dados.mes)
     .replaceAll("{aulas}", dados.aulas)
-    .replaceAll("{pix}", dados.pix ?? "");
+    .replaceAll("{pix}", dados.pix ?? "")
+    .replaceAll("{dias}", dados.dias ?? "");
 }
 
 export function primeiroNome(nome: string): string {

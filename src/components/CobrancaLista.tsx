@@ -20,7 +20,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { resumoMes, type CobrancaItemVM } from "@/lib/cobranca";
-import { formatBRL } from "@/lib/datas";
+import { formatBRL, listaDias } from "@/lib/datas";
 import { vibra } from "@/lib/haptico";
 import { ProgressRing } from "./ProgressRing";
 import { Portal } from "./Portal";
@@ -563,6 +563,7 @@ function CobrarSheet({
     mes: nomeMesAtual,
     aulas: item.resumo,
     pix: chavePix ?? "",
+    dias: listaDias(item.diasAula),
   });
   const pix =
     chavePix && item.valor > 0

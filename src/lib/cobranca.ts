@@ -5,6 +5,7 @@
 import {
   agregaExcecoes,
   contagemMes,
+  ocorrenciasNoMes,
   resumoContagem,
   valorFechamento,
   type ExcecoesMes,
@@ -31,6 +32,8 @@ export interface CobrancaItemVM {
   ajusteMotivo: string | null;
   /** só por_aula — legenda "R$ X/aula" sob o valor-herói */
   valorAula: number | null;
+  /** dias do MÊS de referência em que cai a agenda do aluno (placeholder {dias}) */
+  diasAula: number[];
   /** quando a cobrança foi mandada — alimenta o follow-up de esquecidas */
   enviadoEm: string | null;
   /** só créditos */
@@ -91,6 +94,7 @@ export function montaItemFechamento(
     ajuste,
     ajusteMotivo: fechamento?.ajuste_motivo ?? null,
     valorAula: modo === "por_aula" ? Number(aluno.valor_mensal ?? 0) : null,
+    diasAula: ocorrenciasNoMes(aluno.dias_semana, year, month0),
     enviadoEm: fechamento?.enviado_em ?? null,
     saldo: null,
     progresso: null,
@@ -121,6 +125,7 @@ export function montaItemCreditos(
     ajuste: 0,
     ajusteMotivo: null,
     valorAula: null,
+    diasAula: [], // pacote não tem agenda fixa
     enviadoEm: null,
     saldo: restantes,
     progresso,
