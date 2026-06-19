@@ -70,12 +70,14 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* Dinheiro em mono (assinatura CARIMBO): todo valor R$ usa esta classe.
-   Tabular + centavos sempre — colunas de extrato alinham perfeitas. */
+/* Dinheiro: fonte do SISTEMA (no iPhone = SF Pro, cara da Apple) em vez do
+   mono — o zero do IBM Plex Mono tinha um ponto no meio que ficava estranho.
+   tabular-nums mantém as colunas de valores alinhadas. */
 .font-money {
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: -apple-system, system-ui, "SF Pro Display", "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums lining-nums;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* Selo de carimbo — "PAGO" estampado no card quitado e no recibo. */
