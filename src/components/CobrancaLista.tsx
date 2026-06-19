@@ -22,6 +22,7 @@ import {
 import { resumoMes, type CobrancaItemVM } from "@/lib/cobranca";
 import { formatBRL } from "@/lib/datas";
 import { vibra } from "@/lib/haptico";
+import { ProgressRing } from "./ProgressRing";
 import { pixCopiaECola } from "@/lib/pix";
 import {
   buscaReciboFile,
@@ -262,16 +263,24 @@ export function CobrancaLista({
               )}
 
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-medium text-text">{item.nome}</p>
-                  <p className="mt-0.5 truncate text-sm text-text-muted" title={item.resumo}>
-                    {item.resumo}
-                  </p>
-                  {item.ajusteMotivo && (
-                    <p className="mt-0.5 truncate text-xs text-text-muted">
-                      “{item.ajusteMotivo}”
-                    </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  {item.progresso && (
+                    <ProgressRing
+                      usadas={item.progresso.usadas}
+                      qtd={item.progresso.qtd}
+                    />
                   )}
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-medium text-text">{item.nome}</p>
+                    <p className="mt-0.5 truncate text-sm text-text-muted" title={item.resumo}>
+                      {item.resumo}
+                    </p>
+                    {item.ajusteMotivo && (
+                      <p className="mt-0.5 truncate text-xs text-text-muted">
+                        “{item.ajusteMotivo}”
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end">
                   <p className="font-money text-xl font-semibold leading-tight text-text min-[390px]:text-[22px]">

@@ -8,9 +8,10 @@ import type { ModoCobranca } from "@/lib/tipos";
 
 export interface LinhaLote {
   nome: string;
-  valor: string; // "300" ou "300,00" — parse aqui
+  valor: string; // "300" ou "300,00" — parse aqui (no pacote = valor do pacote)
   modo: ModoCobranca;
-  horarios: Record<string, string>; // diaSemana(0..6) -> "HH:MM" (hora opcional)
+  horarios: Record<string, string>; // diaSemana(0..6) -> "HH:MM" (não usado no pacote)
+  qtd: string; // só pacote: quantidade de aulas do pacote
 }
 
 export interface CamposAluno {
@@ -64,7 +65,9 @@ export async function criarAlunosEmLote(linhas: LinhaLote[]) {
     const valor = parseValorBR(l.valor);
     if (valor === null)
       throw new Error(`Valor inválido para ${l.nome.trim()}.`);
-    const { dias, horarios } = sanitizaHorarios(l.horarios);
+    // Pacote não tem agenda fixa — dias/horários vazios.
+    const { dias, horarios } =
+      l.modo === "creditos" ? { dias: [], horarios: {} } : sanitizaHorarios(l.horarios);
     return {
       professor_id: professorId,
       nome: l.nome.trim(),
@@ -76,10 +79,35 @@ export async function criarAlunosEmLote(linhas: LinhaLote[]) {
     };
   });
 
-  const { error } = await supabase.from("alunos").insert(rows);
+  const { data: criados, error } = await supabase
+    .from("alunos")
+    .insert(rows)
+    .select("id, nome");
   if (error) throw new Error(traduzErroModo(error.message));
+
+  // Pacote: cria o pacote inicial com a quantidade informada no cadastro.
+  const pacotes = validas
+    .map((l, i) => ({ l, aluno: criados?.[i] }))
+    .filter(({ l }) => l.modo === "creditos")
+    .map(({ l, aluno }) => {
+      const qtd = parseInt(l.qtd, 10);
+      const valor = parseValorBR(l.valor) ?? 0;
+      return {
+        professor_id: professorId,
+        aluno_id: aluno!.id,
+        qtd_aulas: Number.isInteger(qtd) && qtd > 0 ? qtd : 10,
+        valor,
+        saldo: Number.isInteger(qtd) && qtd > 0 ? qtd : 10,
+      };
+    });
+  if (pacotes.length > 0) {
+    const { error: pErr } = await supabase.from("pacotes_creditos").insert(pacotes);
+    if (pErr) throw new Error(pErr.message);
+  }
+
   revalidatePath("/alunos");
   revalidatePath("/");
+  revalidatePath("/cobranca");
 }
 
 // Erros de "banco desatualizado" (migrações não rodadas) com mensagem clara.

@@ -4,7 +4,9 @@
 // creditos: pacote pré-pago que debita por aula feita.
 export type ModoCobranca = "mensalidade" | "por_aula" | "creditos";
 export type AlunoStatus = "ativo" | "suspenso";
-export type RegistroTipo = "falta" | "extra" | "desmarcada";
+// falta/extra/desmarcada = exceções de aluno com agenda fixa.
+// aula = aula marcada de aluno de PACOTE (sem agenda fixa; cada aula é evento).
+export type RegistroTipo = "falta" | "extra" | "desmarcada" | "aula";
 export type RegistroOrigem = "checkin" | "retroativo" | "ajuste";
 export type FechamentoStatus = "aberto" | "enviado" | "pago";
 
@@ -31,6 +33,7 @@ export interface RegistroAula {
   tipo: RegistroTipo;
   origem: RegistroOrigem;
   quantidade: number;
+  horario: string | null; // hora da aula de pacote agendada ("HH:MM:SS")
   created_at: string;
 }
 

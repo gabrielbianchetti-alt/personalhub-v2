@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { buscaRegistros, type RegistroLeve } from "@/lib/supabase/registros";
+import {
+  buscaRegistros,
+  buscaAulasPacote,
+  type RegistroLeve,
+} from "@/lib/supabase/registros";
 import {
   agoraSP,
   diasNoMes,
@@ -8,7 +12,7 @@ import {
   nomeMes,
   parteIso,
 } from "@/lib/datas";
-import { saldoCreditos } from "@/lib/aulas";
+import { progressoPacote } from "@/lib/aulas";
 import {
   montaItemCreditos,
   montaItemFechamento,
@@ -106,28 +110,20 @@ export default async function CobrancaPage({
   const comPacote = creditoAlunos
     .map((a, i) => ({ a, pacote: pacotes[i].data }))
     .filter((x): x is { a: (typeof ativos)[number]; pacote: NonNullable<typeof x.pacote> } => !!x.pacote);
-  const regsCredito = await Promise.all(
+  const aulasCredito = await Promise.all(
     comPacote.map(({ a, pacote }) =>
-      buscaRegistros(supabase, {
+      buscaAulasPacote(supabase, {
         alunoId: a.id,
-        depoisDe: pacote.created_at.slice(0, 10),
-        ate: ateData,
+        de: pacote.created_at.slice(0, 10),
       }),
     ),
   );
   comPacote.forEach(({ a, pacote }, i) => {
-    const compraIso = pacote.created_at.slice(0, 10);
     itemPorAluno.set(
       a.id,
       montaItemCreditos(
         a,
-        saldoCreditos({
-          qtdCompradas: pacote.qtd_aulas,
-          diasSemana: a.dias_semana,
-          compraIso,
-          hojeIso: ateData,
-          registros: regsCredito[i],
-        }),
+        progressoPacote(pacote.qtd_aulas, aulasCredito[i], ateData),
         { qtd: pacote.qtd_aulas, valor: Number(pacote.valor) },
       ),
     );

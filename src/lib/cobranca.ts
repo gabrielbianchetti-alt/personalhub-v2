@@ -8,6 +8,7 @@ import {
   resumoContagem,
   valorFechamento,
   type ExcecoesMes,
+  type ProgressoPacote,
 } from "./aulas.ts";
 import type {
   Aluno,
@@ -34,6 +35,7 @@ export interface CobrancaItemVM {
   enviadoEm: string | null;
   /** só créditos */
   saldo: number | null;
+  progresso: ProgressoPacote | null;
   ultimoPacote: { qtd: number; valor: number } | null;
 }
 
@@ -91,15 +93,17 @@ export function montaItemFechamento(
     valorAula: modo === "por_aula" ? Number(aluno.valor_mensal ?? 0) : null,
     enviadoEm: fechamento?.enviado_em ?? null,
     saldo: null,
+    progresso: null,
     ultimoPacote: null,
   };
 }
 
 export function montaItemCreditos(
   aluno: Pick<Aluno, "id" | "nome" | "telefone">,
-  saldo: number | null,
+  progresso: ProgressoPacote | null,
   ultimoPacote: { qtd: number; valor: number } | null,
 ): CobrancaItemVM {
+  const restantes = progresso?.restantes ?? null;
   return {
     alunoId: aluno.id,
     nome: aluno.nome,
@@ -108,15 +112,18 @@ export function montaItemCreditos(
     status: "aberto",
     valor: ultimoPacote?.valor ?? 0,
     resumo:
-      saldo === null
+      progresso === null
         ? "sem pacote ainda"
-        : `${saldo} ${saldo === 1 || saldo === -1 ? "aula restante" : "aulas restantes"}`,
+        : `${progresso.usadas} de ${progresso.qtd} usadas${
+            progresso.agendadas > 0 ? ` · ${progresso.agendadas} agendada${progresso.agendadas === 1 ? "" : "s"}` : ""
+          }`,
     realizadas: 0,
     ajuste: 0,
     ajusteMotivo: null,
     valorAula: null,
     enviadoEm: null,
-    saldo,
+    saldo: restantes,
+    progresso,
     ultimoPacote,
   };
 }

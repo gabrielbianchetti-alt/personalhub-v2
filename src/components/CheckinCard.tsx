@@ -16,7 +16,11 @@ export function CheckinCard({
   onToggleFalta: (id: string) => void;
   onTirarExtra: (id: string) => void;
 }) {
-  const subtitle = aluno.avulso ? "Aula extra" : aluno.horario || "Presumido";
+  const subtitle = aluno.pacote
+    ? aluno.horario || "Aula do pacote"
+    : aluno.avulso
+      ? "Aula extra"
+      : aluno.horario || "Presumido";
   // Passado não-resolvido lê como "feito": check silencioso (--success), sem dimming.
   const feito = isPast && !aluno.faltou && !aluno.avulso;
 
@@ -35,6 +39,11 @@ export function CheckinCard({
           >
             {aluno.nome}
           </p>
+          {aluno.pacote && (
+            <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
+              pacote
+            </span>
+          )}
           {aluno.extras > 0 && (
             // O × deixa claro que o chip remove; -m/p amplia o alvo de toque.
             <button
@@ -63,20 +72,23 @@ export function CheckinCard({
         </div>
       </div>
 
-      {/* Corrigir é sempre possível: o chip "Faltou" permanece mesmo no passado. */}
-      <button
-        type="button"
-        aria-pressed={aluno.faltou}
-        onClick={() => onToggleFalta(aluno.id)}
-        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-medium transition-colors ${
-          aluno.faltou
-            ? "bg-danger text-white"
-            : "bg-surface-soft text-text-muted active:bg-danger/10"
-        }`}
-      >
-        <X size={16} strokeWidth={2.4} />
-        Faltou
-      </button>
+      {/* Pacote: aula já consumiu o crédito (no-show paga) — sem "Faltou".
+          Demais: corrigir é sempre possível, o chip permanece mesmo no passado. */}
+      {!aluno.pacote && (
+        <button
+          type="button"
+          aria-pressed={aluno.faltou}
+          onClick={() => onToggleFalta(aluno.id)}
+          className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-medium transition-colors ${
+            aluno.faltou
+              ? "bg-danger text-white"
+              : "bg-surface-soft text-text-muted active:bg-danger/10"
+          }`}
+        >
+          <X size={16} strokeWidth={2.4} />
+          Faltou
+        </button>
+      )}
     </article>
   );
 }

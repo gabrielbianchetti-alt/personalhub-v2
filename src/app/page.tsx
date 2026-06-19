@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { buscaRegistros } from "@/lib/supabase/registros";
+import { buscaRegistros, buscaAulasPacote } from "@/lib/supabase/registros";
 import { agoraSP, addDias, dataPorExtenso } from "@/lib/datas";
 import { montaAlunosHoje, montaPendencias } from "@/lib/hoje";
 import { CheckinList } from "@/components/CheckinList";
@@ -11,15 +11,17 @@ export default async function HojePage() {
   const sp = agoraSP(); // fuso América/São_Paulo — nunca o relógio do servidor
   const janelaInicio = addDias(sp.iso, -7);
 
-  const [alunosRes, registros, resolvidosRes, profRes] = await Promise.all([
-    supabase
-      .from("alunos")
-      .select("id, nome, horario, horarios, dias_semana, created_at")
-      .eq("status", "ativo"),
-    buscaRegistros(supabase, { de: janelaInicio, ate: sp.iso }),
-    supabase.from("dias_resolvidos").select("data").gte("data", janelaInicio),
-    supabase.from("professores").select("created_at").single(),
-  ]);
+  const [alunosRes, registros, aulasPacoteHoje, resolvidosRes, profRes] =
+    await Promise.all([
+      supabase
+        .from("alunos")
+        .select("id, nome, horario, horarios, dias_semana, created_at")
+        .eq("status", "ativo"),
+      buscaRegistros(supabase, { de: janelaInicio, ate: sp.iso }),
+      buscaAulasPacote(supabase, { de: sp.iso, ate: sp.iso }), // aulas de pacote de hoje
+      supabase.from("dias_resolvidos").select("data").gte("data", janelaInicio),
+      supabase.from("professores").select("created_at").single(),
+    ]);
 
   const ativos = alunosRes.data ?? [];
 
@@ -27,6 +29,7 @@ export default async function HojePage() {
     ativos,
     registros.filter((r) => r.data === sp.iso),
     sp.dow,
+    aulasPacoteHoje.map((a) => ({ aluno_id: a.aluno_id, horario: a.horario })),
   );
   // Se dias_resolvidos ainda não existe (pré-0004), não mostra pendências —
   // melhor que uma pergunta impossível de dispensar.

@@ -11,7 +11,7 @@ import { criarAlunosEmLote, type LinhaLote } from "@/app/actions/alunos";
 import { DiasHorarios } from "@/components/DiasHorarios";
 
 function linhaVazia(): LinhaLote {
-  return { nome: "", valor: "", modo: "mensalidade", horarios: {} };
+  return { nome: "", valor: "", modo: "mensalidade", horarios: {}, qtd: "" };
 }
 
 export default function NovoAlunosPage() {
@@ -96,12 +96,15 @@ export default function NovoAlunosPage() {
               <input
                 value={l.valor}
                 onChange={(e) => muda(i, { valor: e.target.value })}
-                placeholder={l.modo === "por_aula" ? "80" : "300"}
+                placeholder={l.modo === "por_aula" ? "80" : l.modo === "creditos" ? "600" : "300"}
                 inputMode="decimal"
                 className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
               />
               {l.modo === "por_aula" && (
                 <span className="shrink-0 text-xs text-text-muted">/aula</span>
+              )}
+              {l.modo === "creditos" && (
+                <span className="shrink-0 text-xs text-text-muted">/pacote</span>
               )}
             </div>
 
@@ -126,12 +129,25 @@ export default function NovoAlunosPage() {
               ))}
             </div>
 
-            <div className="mt-3">
-              <DiasHorarios
-                value={l.horarios}
-                onChange={(horarios) => muda(i, { horarios })}
-              />
-            </div>
+            {l.modo === "creditos" ? (
+              <div className="mt-3 flex items-center gap-1 rounded-xl bg-surface-soft px-3 py-2.5">
+                <input
+                  value={l.qtd}
+                  onChange={(e) => muda(i, { qtd: e.target.value })}
+                  placeholder="10"
+                  inputMode="numeric"
+                  className="w-12 min-w-0 bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
+                />
+                <span className="text-sm text-text-muted">aulas no pacote</span>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <DiasHorarios
+                  value={l.horarios}
+                  onChange={(horarios) => muda(i, { horarios })}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>

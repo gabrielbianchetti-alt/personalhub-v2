@@ -56,7 +56,8 @@ export function agregaExcecoes(registros: Pick<RegistroAula, "tipo" | "quantidad
     const q = r.quantidade ?? 1;
     if (r.tipo === "falta") agg.faltas += q;
     else if (r.tipo === "extra") agg.extras += q;
-    else agg.desmarcadas += q;
+    else if (r.tipo === "desmarcada") agg.desmarcadas += q;
+    // tipo 'aula' (pacote) não entra na conta de mensalidade/por_aula.
   }
   return agg;
 }
@@ -116,6 +117,31 @@ export function resumoContagem(c: ContagemMes, e: ExcecoesMes, ajuste = 0): stri
   if (e.extras > 0) partes.push(`${e.extras} ${e.extras === 1 ? "extra" : "extras"}`);
   if (ajuste !== 0) partes.push(`ajuste ${ajuste > 0 ? "+" : ""}${ajuste}`);
   return partes.join(" · ");
+}
+
+export interface ProgressoPacote {
+  qtd: number;
+  usadas: number; // aulas já realizadas (data <= hoje)
+  agendadas: number; // marcadas pra frente (data > hoje)
+  restantes: number; // livres p/ marcar
+}
+
+/**
+ * Progresso do pacote: pacote agora é "aulas marcadas" (não agenda fixa).
+ * Cada aula marcada consome 1 (no-show paga; cancelar devolve = remover a aula).
+ */
+export function progressoPacote(
+  qtd: number,
+  aulas: { data: string }[],
+  hojeIso: string,
+): ProgressoPacote {
+  let usadas = 0;
+  let agendadas = 0;
+  for (const a of aulas) {
+    if (a.data <= hojeIso) usadas++;
+    else agendadas++;
+  }
+  return { qtd, usadas, agendadas, restantes: Math.max(0, qtd - usadas - agendadas) };
 }
 
 /**

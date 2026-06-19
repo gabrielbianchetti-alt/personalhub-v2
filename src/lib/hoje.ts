@@ -12,6 +12,13 @@ export interface AlunoHojeVM {
   extras: number;
   /** entrou na lista apenas como extra, fora do dia esperado */
   avulso: boolean;
+  /** aula de PACOTE marcada pra hoje (sem "Faltou"; já consumiu o crédito) */
+  pacote?: boolean;
+}
+
+export interface AulaPacoteHoje {
+  aluno_id: string;
+  horario: string | null;
 }
 
 export interface RosterVM {
@@ -28,6 +35,7 @@ export function montaAlunosHoje(
   ativos: Pick<Aluno, "id" | "nome" | "horario" | "horarios" | "dias_semana">[],
   registrosHoje: Pick<RegistroAula, "aluno_id" | "tipo" | "quantidade">[],
   dowHoje: number,
+  aulasPacoteHoje: AulaPacoteHoje[] = [],
 ): AlunoHojeVM[] {
   const faltas = new Set(
     registrosHoje.filter((r) => r.tipo === "falta").map((r) => r.aluno_id),
@@ -66,7 +74,25 @@ export function montaAlunosHoje(
       avulso: true,
     }));
 
-  return [...esperados, ...avulsos];
+  // Aulas de pacote marcadas pra hoje (alunos sem agenda fixa).
+  const porId = new Map(ativos.map((a) => [a.id, a.nome]));
+  const pacoteHoje = aulasPacoteHoje
+    .filter((p) => porId.has(p.aluno_id))
+    .map((p) => ({
+      id: p.aluno_id,
+      nome: porId.get(p.aluno_id)!,
+      horario: p.horario ? p.horario.slice(0, 5) : "",
+      faltou: false,
+      extras: 0,
+      avulso: false,
+      pacote: true,
+    }));
+
+  return [...esperados, ...pacoteHoje, ...avulsos].sort(
+    (a, b) =>
+      (a.horario || "99").localeCompare(b.horario || "99") ||
+      a.nome.localeCompare(b.nome),
+  );
 }
 
 /**

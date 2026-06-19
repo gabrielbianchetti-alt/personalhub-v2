@@ -34,3 +34,28 @@ export async function buscaRegistros(
     (r) => ({ ...r, quantidade: 1 }),
   );
 }
+
+// Aulas marcadas de PACOTE (tipo 'aula'), com hora e id (p/ cancelar).
+// Tolerante a pré-migração (0009/0010): se a coluna/tipo não existir, [].
+export interface AulaPacote {
+  id: string;
+  aluno_id: string;
+  data: string;
+  horario: string | null;
+}
+
+export async function buscaAulasPacote(
+  supabase: SupabaseClient,
+  f: { alunoId?: string; de?: string; ate?: string },
+): Promise<AulaPacote[]> {
+  let q = supabase
+    .from("registros_aula")
+    .select("id, aluno_id, data, horario")
+    .eq("tipo", "aula");
+  if (f.alunoId) q = q.eq("aluno_id", f.alunoId);
+  if (f.de) q = q.gte("data", f.de);
+  if (f.ate) q = q.lte("data", f.ate);
+  const { data, error } = await q.order("data");
+  if (error) return []; // banco pré-0009/0010: pacote ainda não disponível
+  return (data ?? []) as unknown as AulaPacote[];
+}

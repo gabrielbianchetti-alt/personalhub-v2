@@ -6,15 +6,24 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, Pause, Play } from "lucide-react";
+import { ArrowLeft, ChevronDown, Pause, Play, Plus, X } from "lucide-react";
 import {
   atualizarAluno,
   mudarStatusAluno,
   type CamposAluno,
 } from "@/app/actions/alunos";
+import { agendarAulaPacote, cancelarAulaPacote } from "@/app/actions/pacote";
 import { DiasHorarios } from "@/components/DiasHorarios";
-import { horarioCurto } from "@/lib/datas";
+import { ProgressRing } from "@/components/ProgressRing";
+import { dataCurta, horarioCurto } from "@/lib/datas";
+import type { ProgressoPacote } from "@/lib/aulas";
 import type { ModoCobranca, AlunoStatus } from "@/lib/tipos";
+
+export interface AulaPacoteVM {
+  id: string;
+  data: string; // "YYYY-MM-DD"
+  horario: string; // "HH:MM" ou ""
+}
 
 interface AlunoDados {
   id: string;
@@ -43,12 +52,17 @@ function horariosIniciais(a: AlunoDados): Record<string, string> {
 
 export function AlunoPerfil({
   aluno,
-  saldo,
+  progresso,
+  aulasPacote,
+  temPacote,
 }: {
   aluno: AlunoDados;
-  saldo: number | null;
+  progresso: ProgressoPacote | null;
+  aulasPacote: AulaPacoteVM[];
+  temPacote: boolean;
 }) {
   const router = useRouter();
+  const ehPacote = aluno.modo_cobranca === "creditos";
   const [campos, setCampos] = useState<CamposAluno>({
     nome: aluno.nome,
     valor: String(aluno.valor_mensal ?? "").replace(".", ","),
@@ -123,18 +137,13 @@ export function AlunoPerfil({
         </p>
       )}
 
-      {saldo !== null && (
-        <div className="mt-4 rounded-[14px] bg-surface p-4 shadow-soft">
-          <p className="text-sm text-text-muted">Saldo do pacote</p>
-          <p className="font-display text-4xl text-text tabular-nums">
-            {saldo} {saldo === 1 || saldo === -1 ? "aula" : "aulas"}
-          </p>
-          {saldo <= 2 && (
-            <p className="mt-1 text-sm text-warning">
-              Acabando — venda o próximo na Cobrança.
-            </p>
-          )}
-        </div>
+      {ehPacote && (
+        <PacotePainel
+          alunoId={aluno.id}
+          progresso={progresso}
+          aulas={aulasPacote}
+          temPacote={temPacote}
+        />
       )}
 
       <div className="mt-4 flex flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-soft">
@@ -192,15 +201,18 @@ export function AlunoPerfil({
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-            Dias e horários
-          </span>
-          <DiasHorarios
-            value={campos.horarios}
-            onChange={(horarios) => muda({ horarios })}
-          />
-        </div>
+        {/* Pacote não tem agenda fixa — as aulas são marcadas (painel acima). */}
+        {!ehPacote && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+              Dias e horários
+            </span>
+            <DiasHorarios
+              value={campos.horarios}
+              onChange={(horarios) => muda({ horarios })}
+            />
+          </div>
+        )}
 
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
@@ -275,6 +287,136 @@ export function AlunoPerfil({
         {suspenso ? <Play size={16} /> : <Pause size={16} />}
         {suspenso ? "Reativar aluno" : "Suspender aluno"}
       </button>
+    </div>
+  );
+}
+
+// ── Painel do pacote: progresso (anel) + agendar aula + lista c/ cancelar ──
+function PacotePainel({
+  alunoId,
+  progresso,
+  aulas,
+  temPacote,
+}: {
+  alunoId: string;
+  progresso: ProgressoPacote | null;
+  aulas: AulaPacoteVM[];
+  temPacote: boolean;
+}) {
+  const router = useRouter();
+  const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const agendar = () => {
+    setErro(null);
+    if (!data) {
+      setErro("Escolha o dia da aula.");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await agendarAulaPacote(alunoId, data, hora);
+        setData("");
+        setHora("");
+        router.refresh();
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : "Não consegui marcar.");
+      }
+    });
+  };
+
+  const cancelar = (id: string) =>
+    startTransition(async () => {
+      setErro(null);
+      try {
+        await cancelarAulaPacote(id, alunoId);
+        router.refresh();
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : "Não consegui cancelar.");
+      }
+    });
+
+  if (!temPacote) {
+    return (
+      <div className="mt-4 rounded-[14px] bg-surface p-4 text-sm text-text-muted shadow-soft">
+        Sem pacote ativo. Venda o primeiro pacote na aba <strong className="text-text">Cobrança</strong>.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-4 rounded-[14px] bg-surface p-4 shadow-soft">
+      {progresso && (
+        <div className="flex items-center gap-3">
+          <ProgressRing usadas={progresso.usadas} qtd={progresso.qtd} size={52} />
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-text">
+              {progresso.restantes}{" "}
+              {progresso.restantes === 1 ? "aula livre" : "aulas livres"}
+            </p>
+            <p className="text-sm text-text-muted">
+              {progresso.usadas} feita{progresso.usadas === 1 ? "" : "s"}
+              {progresso.agendadas > 0 && ` · ${progresso.agendadas} agendada${progresso.agendadas === 1 ? "" : "s"}`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Agendar aula: dia + hora → aparece no Hoje no dia certo. */}
+      <div className="flex items-center gap-2">
+        <input
+          type="date"
+          value={data}
+          onChange={(e) => setData(e.target.value)}
+          aria-label="Dia da aula"
+          className="min-w-0 flex-1 rounded-xl bg-surface-soft px-3 py-2.5 text-sm text-text outline-none"
+        />
+        <input
+          type="time"
+          value={hora}
+          onChange={(e) => setHora(e.target.value)}
+          aria-label="Horário da aula"
+          className="shrink-0 rounded-xl bg-surface-soft px-2.5 py-2.5 text-sm text-text outline-none"
+        />
+        <button
+          type="button"
+          disabled={pending}
+          onClick={agendar}
+          aria-label="Marcar aula"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-contrast active:opacity-90 disabled:opacity-60"
+        >
+          <Plus size={20} strokeWidth={2.4} />
+        </button>
+      </div>
+
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+
+      {aulas.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {aulas.map((a) => (
+            <li
+              key={a.id}
+              className="flex items-center justify-between rounded-xl bg-surface-soft px-3 py-2"
+            >
+              <span className="text-sm text-text">
+                {dataCurta(a.data)}
+                {a.horario && ` · ${a.horario}`}
+              </span>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => cancelar(a.id)}
+                aria-label="Cancelar aula"
+                className="-m-2 p-2 text-text-muted active:text-danger disabled:opacity-60"
+              >
+                <X size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
