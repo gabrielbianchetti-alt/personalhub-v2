@@ -6,6 +6,17 @@ import { agoraSP, addDias, dataPorExtenso } from "@/lib/datas";
 import { montaAlunosHoje, montaPendencias } from "@/lib/hoje";
 import { CheckinList } from "@/components/CheckinList";
 
+// Primeiro nome pra saudação. Se o nome ainda é o e-mail (default do trigger
+// no signup), usa a parte antes do @ — "gabriel@..." vira "Gabriel".
+// Sem nome utilizável, devolve null (a saudação fica só "Boa tarde").
+function primeiroNome(nome: string | null): string | null {
+  if (!nome) return null;
+  const base = nome.includes("@") ? nome.split("@")[0] : nome;
+  const primeiro = base.trim().split(/[\s.]+/)[0];
+  if (!primeiro) return null;
+  return primeiro.charAt(0).toUpperCase() + primeiro.slice(1);
+}
+
 export default async function HojePage() {
   const supabase = await createClient();
   const sp = agoraSP(); // fuso América/São_Paulo — nunca o relógio do servidor
@@ -20,7 +31,7 @@ export default async function HojePage() {
       buscaRegistros(supabase, { de: janelaInicio, ate: sp.iso }),
       buscaAulasPacote(supabase, { de: sp.iso, ate: sp.iso }), // aulas de pacote de hoje
       supabase.from("dias_resolvidos").select("data").gte("data", janelaInicio),
-      supabase.from("professores").select("created_at").single(),
+      supabase.from("professores").select("created_at, nome").single(),
     ]);
 
   const ativos = alunosRes.data ?? [];
@@ -44,6 +55,9 @@ export default async function HojePage() {
       });
 
   const periodo = sp.hour < 12 ? "manha" : sp.hour < 18 ? "tarde" : "noite";
+  const saudacao =
+    periodo === "manha" ? "Bom dia" : periodo === "tarde" ? "Boa tarde" : "Boa noite";
+  const nome = primeiroNome(profRes.data?.nome ?? null);
 
   return (
     <div className="relative flex flex-1 flex-col">
@@ -60,7 +74,10 @@ export default async function HojePage() {
         >
           <Settings size={19} strokeWidth={2.2} />
         </Link>
-        <p className="relative text-sm font-medium text-text-muted">Hoje</p>
+        <p className="relative text-sm font-medium text-text-muted">
+          {saudacao}
+          {nome ? `, ${nome}` : ""}
+        </p>
         <h1 className="relative mt-1 font-display text-[2.5rem] leading-[1.05] text-text">
           {dataPorExtenso(sp.iso)}
         </h1>

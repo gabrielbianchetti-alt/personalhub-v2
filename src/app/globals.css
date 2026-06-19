@@ -169,6 +169,16 @@ body {
 .tab-indicador {
   transition: transform 420ms cubic-bezier(0.34, 1.3, 0.5, 1);
 }
+/* Durante o arrasto do carrossel, o pill segue o dedo 1:1 (sem easing). */
+:root[data-swipe] .tab-indicador {
+  transition: none;
+}
+/* No commit/volta, o pill desliza junto com o trilho (mesma duração/curva). */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-swipe-commit] .tab-indicador {
+    transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .tab-indicador {
     transition: none;
@@ -269,15 +279,18 @@ body {
   }
 }
 
-/* Transição de entrada entre telas (template.tsx remonta a cada rota). */
+/* Transição de entrada entre telas (template.tsx remonta a cada rota).
+   Só opacity: NÃO usar transform — .pagina-entra é ancestral do card glass
+   sticky da Cobrança, e transform num ancestral derruba backdrop-filter e
+   position:sticky dos descendentes (mesma invariante do carrossel). */
 @media (prefers-reduced-motion: no-preference) {
   .pagina-entra {
     animation: pagina-entra 240ms ease-out;
   }
 }
 @keyframes pagina-entra {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Celebração discreta do "cobrança enviada" (§4.3 / §6.4) */

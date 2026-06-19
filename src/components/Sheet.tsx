@@ -6,6 +6,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { Portal } from "./Portal";
 
 export function Sheet({
   open,
@@ -33,6 +34,7 @@ export function Sheet({
   }, [open, onClose]);
 
   return (
+    <Portal>
     <div
       className={`fixed inset-0 z-[60] ${open ? "" : "pointer-events-none"}`}
       aria-hidden={!open}
@@ -76,5 +78,6 @@ export function Sheet({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

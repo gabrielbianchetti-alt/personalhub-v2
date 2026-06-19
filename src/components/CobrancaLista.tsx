@@ -23,6 +23,7 @@ import { resumoMes, type CobrancaItemVM } from "@/lib/cobranca";
 import { formatBRL } from "@/lib/datas";
 import { vibra } from "@/lib/haptico";
 import { ProgressRing } from "./ProgressRing";
+import { Portal } from "./Portal";
 import { pixCopiaECola } from "@/lib/pix";
 import {
   buscaReciboFile,
@@ -195,15 +196,22 @@ export function CobrancaLista({
   return (
     <>
       {festa && (
-        <div className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center">
-          <p className="glass rounded-2xl border border-glass-border px-8 py-5 font-display text-2xl text-text shadow-soft">
-            Mês fechado 👊
-          </p>
-        </div>
+        <Portal>
+          <div className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center">
+            <p className="glass rounded-2xl border border-glass-border px-8 py-5 font-display text-2xl text-text shadow-soft">
+              Mês fechado 👊
+            </p>
+          </div>
+        </Portal>
       )}
 
-      {/* Card flutuante de resumo — 3º lugar sancionado de glass (§6.4). */}
-      <div className="glass sticky top-3 z-40 mt-4 rounded-[14px] border border-glass-border px-4 py-3 shadow-soft">
+      {/* Card flutuante de resumo — 3º lugar sancionado de glass (§6.4).
+          position via style: `.glass` é unlayered e sobrepõe a utility
+          `.sticky` (layer utilities) do Tailwind v4 — sem isto o card não gruda. */}
+      <div
+        className="glass sticky top-3 z-40 mt-4 rounded-[14px] border border-glass-border px-4 py-3 shadow-soft"
+        style={{ position: "sticky", top: "0.75rem" }}
+      >
         <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">

@@ -43,7 +43,8 @@ export function BottomTabBar() {
               aria-hidden="true"
               className="tab-indicador pointer-events-none absolute inset-y-0 left-0 w-[calc(100%/3)] rounded-full bg-accent-soft"
               style={{
-                transform: `translateX(${activeIdx * 100}%)`,
+                // segue o arrasto do carrossel (--aba-progresso) em tempo real
+                transform: `translateX(calc((${activeIdx} + var(--aba-progresso, 0)) * 100%))`,
                 opacity: activeIdx === -1 ? 0 : 1,
               }}
             />
