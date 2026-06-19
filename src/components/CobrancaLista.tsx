@@ -4,23 +4,30 @@
 // Extras: Pix copia e cola, follow-up de enviadas sem resposta e o
 // "Fechar o mês" guiado (encadeia os sheets aluno a aluno).
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Check,
   ChevronRight,
   Copy,
+  Download,
   ImageIcon,
   Minus,
   Plus,
   RotateCcw,
+  Share2,
   SlidersHorizontal,
 } from "lucide-react";
 import { resumoMes, type CobrancaItemVM } from "@/lib/cobranca";
 import { formatBRL } from "@/lib/datas";
 import { vibra } from "@/lib/haptico";
 import { pixCopiaECola } from "@/lib/pix";
+import {
+  buscaReciboFile,
+  compartilharImagem,
+  podeCompartilharArquivo,
+} from "@/lib/compartilhar";
 import {
   renderMensagem,
   TEMPLATE_LEMBRETE,
@@ -39,7 +46,9 @@ import {
 import { salvarTelefone } from "@/app/actions/alunos";
 import { Sheet } from "./Sheet";
 
-type SheetState = { tipo: "cobrar" | "ajuste" | "pacote"; alunoId: string } | null;
+type SheetState =
+  | { tipo: "cobrar" | "ajuste" | "pacote" | "recibo"; alunoId: string }
+  | null;
 
 /** Dias desde o envio — alimenta o "enviada · 3d" e o tom do follow-up. */
 function diasDesde(enviadoEm: string | null): number {
@@ -367,7 +376,6 @@ export function CobrancaLista({
       {sheet?.tipo === "cobrar" && sheetItem && (
         <CobrarSheet
           item={sheetItem}
-          mesRef={mesRef}
           nomeMesAtual={nomeMesAtual}
           template={template}
           chavePix={chavePix}
@@ -382,8 +390,12 @@ export function CobrancaLista({
               ),
             )
           }
+          onRecibo={() => setSheet({ tipo: "recibo", alunoId: sheetItem.alunoId })}
           onClose={fecharSheet}
         />
+      )}
+      {sheet?.tipo === "recibo" && sheetItem && (
+        <ReciboSheet item={sheetItem} mesRef={mesRef} onClose={() => setSheet(null)} />
       )}
       {sheet?.tipo === "ajuste" && sheetItem && (
         <AjusteSheet
@@ -415,7 +427,6 @@ export function CobrancaLista({
 //    Quando já enviada vira lembrete; com chave Pix anexa o copia e cola. ──
 function CobrarSheet({
   item,
-  mesRef,
   nomeMesAtual,
   template,
   chavePix,
@@ -424,10 +435,10 @@ function CobrarSheet({
   onEnviar,
   onPular,
   onTelefone,
+  onRecibo,
   onClose,
 }: {
   item: CobrancaItemVM;
-  mesRef: string;
   nomeMesAtual: string;
   template: string | null;
   chavePix: string | null;
@@ -436,6 +447,7 @@ function CobrarSheet({
   onEnviar: (item: CobrancaItemVM, link: string) => void;
   onPular: (() => void) | null;
   onTelefone: (tel: string) => void;
+  onRecibo: () => void;
   onClose: () => void;
 }) {
   const [tel, setTel] = useState("");
@@ -547,15 +559,14 @@ function CobrarSheet({
                 {copiado ? "Copiado ✓" : "Copiar Pix"}
               </button>
             )}
-            <a
-              href={`/recibo/${item.alunoId}?mes=${mesRef}`}
-              target="_blank"
-              rel="noopener"
+            <button
+              type="button"
+              onClick={onRecibo}
               className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-surface py-2.5 text-sm font-medium text-text-muted shadow-soft active:opacity-80"
             >
               <ImageIcon size={14} />
               Recibo em imagem
-            </a>
+            </button>
           </div>
           {onPular && (
             <button
@@ -568,6 +579,105 @@ function CobrarSheet({
           )}
         </div>
       )}
+    </Sheet>
+  );
+}
+
+// ── Recibo no app: preview + compartilhar nativo (sem beco sem saída) ──
+function ReciboSheet({
+  item,
+  mesRef,
+  onClose,
+}: {
+  item: CobrancaItemVM;
+  mesRef: string;
+  onClose: () => void;
+}) {
+  const url = `/recibo/${item.alunoId}?mes=${mesRef}`;
+  const nomeArquivo = `recibo-${primeiroNome(item.nome).toLowerCase()}-${mesRef}.png`;
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(true);
+
+  // Busca o PNG ao abrir — File pronto ANTES do clique preserva o gesto (iOS).
+  useEffect(() => {
+    let vivo = true;
+    let obj: string | null = null;
+    (async () => {
+      try {
+        const f = await buscaReciboFile(url, nomeArquivo);
+        if (!vivo) return;
+        obj = URL.createObjectURL(f);
+        setFile(f);
+        setPreviewUrl(obj);
+      } catch (e) {
+        if (vivo) setErro(e instanceof Error ? e.message : "Não consegui gerar o recibo.");
+      } finally {
+        if (vivo) setCarregando(false);
+      }
+    })();
+    return () => {
+      vivo = false;
+      if (obj) URL.revokeObjectURL(obj);
+    };
+  }, [url, nomeArquivo]);
+
+  const temShare = file ? podeCompartilharArquivo(file) : false;
+
+  const aoCompartilhar = async () => {
+    if (!file) return;
+    const r = await compartilharImagem(file);
+    if (r === "compartilhado") {
+      vibra(15);
+      onClose();
+    } else if (r === "erro") {
+      setErro("Não consegui abrir o compartilhamento.");
+    }
+    // 'cancelado' = o usuário fechou a folha: silêncio.
+  };
+
+  return (
+    <Sheet open title="Recibo" onClose={onClose}>
+      <div className="flex min-h-[12rem] items-center justify-center rounded-2xl bg-surface p-3 shadow-soft">
+        {carregando && <p className="text-sm text-text-muted">Gerando recibo…</p>}
+        {previewUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewUrl}
+            alt={`Recibo de ${item.nome}`}
+            className="mx-auto max-h-[48vh] w-auto rounded-xl"
+          />
+        )}
+      </div>
+      {erro && <p className="mt-2 text-sm text-danger">{erro}</p>}
+
+      {temShare ? (
+        <button
+          type="button"
+          disabled={!file}
+          onClick={aoCompartilhar}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3.5 font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
+        >
+          <Share2 size={18} /> Compartilhar
+        </button>
+      ) : (
+        // Fallback (desktop / navegador sem Web Share nível 2): baixar.
+        <a
+          href={previewUrl ?? url}
+          download={nomeArquivo}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3.5 font-medium text-accent-contrast active:opacity-90"
+        >
+          <Download size={18} /> Baixar imagem
+        </a>
+      )}
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-2 w-full rounded-2xl py-2.5 text-sm font-medium text-text-muted active:bg-surface-soft"
+      >
+        Fechar
+      </button>
     </Sheet>
   );
 }
