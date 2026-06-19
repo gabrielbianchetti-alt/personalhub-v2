@@ -10,16 +10,14 @@ export interface LinhaLote {
   nome: string;
   valor: string; // "300" ou "300,00" — parse aqui
   modo: ModoCobranca;
-  dias: number[]; // 0=dom … 6=sáb
-  horario: string; // "HH:MM" ou ""
+  horarios: Record<string, string>; // diaSemana(0..6) -> "HH:MM" (hora opcional)
 }
 
 export interface CamposAluno {
   nome: string;
   valor: string;
   modo: ModoCobranca;
-  dias: number[];
-  horario: string;
+  horarios: Record<string, string>;
   telefone: string;
   observacoes: string;
   dataInicio: string; // "YYYY-MM-DD" ou ""
@@ -32,8 +30,20 @@ function parseValorBR(v: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-function validaDias(dias: number[]): number[] {
-  return [...new Set(dias)].filter((d) => d >= 0 && d <= 6).sort();
+// Sanitiza o mapa dia->hora: só dias 0..6 e horas "HH:MM" (hora pode ser "").
+// Devolve {dias ordenados, horarios limpo}.
+function sanitizaHorarios(horarios: Record<string, string>): {
+  dias: number[];
+  horarios: Record<string, string>;
+} {
+  const limpo: Record<string, string> = {};
+  for (const [k, v] of Object.entries(horarios ?? {})) {
+    const d = Number(k);
+    if (!Number.isInteger(d) || d < 0 || d > 6) continue;
+    limpo[String(d)] = /^\d{2}:\d{2}$/.test(v) ? v : "";
+  }
+  const dias = Object.keys(limpo).map(Number).sort((a, b) => a - b);
+  return { dias, horarios: limpo };
 }
 
 async function professorAtual() {
@@ -54,13 +64,14 @@ export async function criarAlunosEmLote(linhas: LinhaLote[]) {
     const valor = parseValorBR(l.valor);
     if (valor === null)
       throw new Error(`Valor inválido para ${l.nome.trim()}.`);
+    const { dias, horarios } = sanitizaHorarios(l.horarios);
     return {
       professor_id: professorId,
       nome: l.nome.trim(),
       valor_mensal: valor,
       modo_cobranca: l.modo,
-      dias_semana: validaDias(l.dias),
-      horario: l.horario || null,
+      dias_semana: dias,
+      horarios,
       status: "ativo" as const,
     };
   });
@@ -71,11 +82,13 @@ export async function criarAlunosEmLote(linhas: LinhaLote[]) {
   revalidatePath("/");
 }
 
-// O valor 'por_aula' do enum vem da migração 0005 — erro claro se faltar.
+// Erros de "banco desatualizado" (migrações não rodadas) com mensagem clara.
 function traduzErroModo(message: string): string {
-  return message.includes("invalid input value for enum")
-    ? "Banco desatualizado: rode a migração 0005 no SQL Editor para usar o modo Por aula."
-    : message;
+  if (message.includes("invalid input value for enum"))
+    return "Banco desatualizado: rode a migração 0005 no SQL Editor para usar o modo Por aula.";
+  if (message.includes("horarios"))
+    return "Banco desatualizado: rode a migração 0007 no SQL Editor (horário por dia).";
+  return message;
 }
 
 export async function atualizarAluno(id: string, campos: CamposAluno) {
@@ -84,14 +97,15 @@ export async function atualizarAluno(id: string, campos: CamposAluno) {
   if (!campos.nome.trim()) throw new Error("Nome é obrigatório.");
   if (valor === null) throw new Error("Valor inválido.");
 
+  const { dias, horarios } = sanitizaHorarios(campos.horarios);
   const { error } = await supabase
     .from("alunos")
     .update({
       nome: campos.nome.trim(),
       valor_mensal: valor,
       modo_cobranca: campos.modo,
-      dias_semana: validaDias(campos.dias),
-      horario: campos.horario || null,
+      dias_semana: dias,
+      horarios,
       telefone: campos.telefone.trim() || null,
       detalhes: {
         ...(campos.observacoes.trim() ? { observacoes: campos.observacoes.trim() } : {}),

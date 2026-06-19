@@ -14,7 +14,7 @@ export default async function HojePage() {
   const [alunosRes, registros, resolvidosRes, profRes] = await Promise.all([
     supabase
       .from("alunos")
-      .select("id, nome, horario, dias_semana, created_at")
+      .select("id, nome, horario, horarios, dias_semana, created_at")
       .eq("status", "ativo"),
     buscaRegistros(supabase, { de: janelaInicio, ate: sp.iso }),
     supabase.from("dias_resolvidos").select("data").gte("data", janelaInicio),

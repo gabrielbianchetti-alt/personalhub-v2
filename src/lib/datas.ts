@@ -122,6 +122,16 @@ export function horarioCurto(horario: string | null): string {
   return horario.slice(0, 5);
 }
 
+/** Hora do aluno NAQUELE dia da semana (0..6); cai no horário único legado. */
+export function horarioDoDia(
+  a: { horarios?: Record<string, string> | null; horario: string | null },
+  dow: number,
+): string {
+  const h = a.horarios?.[String(dow)];
+  if (h) return h.slice(0, 5);
+  return horarioCurto(a.horario);
+}
+
 export function formatBRL(valor: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",

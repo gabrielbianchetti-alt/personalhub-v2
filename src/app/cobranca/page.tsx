@@ -43,11 +43,13 @@ export default async function CobrancaPage() {
     ((fechamentosRes.data ?? []) as Fechamento[]).map((f) => [f.aluno_id, f]),
   );
 
-  const itens: CobrancaItemVM[] = [];
+  // Mensalidade/por_aula: sem await (fecham mês a partir do que já temos).
+  const itemPorAluno = new Map<string, CobrancaItemVM>();
+  const creditoAlunos: typeof ativos = [];
   for (const aluno of ativos) {
     if (aluno.modo_cobranca !== "creditos") {
-      // mensalidade e por_aula fecham mês igual; muda só a fórmula do valor.
-      itens.push(
+      itemPorAluno.set(
+        aluno.id,
         montaItemFechamento(
           aluno,
           registros.filter((r) => r.aluno_id === aluno.id),
@@ -57,39 +59,62 @@ export default async function CobrancaPage() {
         ),
       );
     } else {
-      // Créditos: saldo derivado desde o pacote mais recente.
-      const { data: pacote } = await supabase
-        .from("pacotes_creditos")
-        .select("qtd_aulas, valor, created_at")
-        .eq("aluno_id", aluno.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      let saldo: number | null = null;
-      if (pacote) {
-        const compraIso = pacote.created_at.slice(0, 10);
-        const regsDesde = await buscaRegistros(supabase, {
-          alunoId: aluno.id,
-          depoisDe: compraIso,
-          ate: sp.iso,
-        });
-        saldo = saldoCreditos({
-          qtdCompradas: pacote.qtd_aulas,
-          diasSemana: aluno.dias_semana,
-          compraIso,
-          hojeIso: sp.iso,
-          registros: regsDesde,
-        });
-      }
-      itens.push(
-        montaItemCreditos(
-          aluno,
-          saldo,
-          pacote ? { qtd: pacote.qtd_aulas, valor: Number(pacote.valor) } : null,
-        ),
-      );
+      creditoAlunos.push(aluno);
     }
   }
+
+  // Créditos: antes era 2 queries SEQUENCIAIS por aluno (waterfall). Agora
+  // o pacote mais recente de cada um em paralelo, depois os registros em
+  // paralelo — saldo derivado desde a compra.
+  const pacotes = await Promise.all(
+    creditoAlunos.map((a) =>
+      supabase
+        .from("pacotes_creditos")
+        .select("qtd_aulas, valor, created_at")
+        .eq("aluno_id", a.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ),
+  );
+  const comPacote = creditoAlunos
+    .map((a, i) => ({ a, pacote: pacotes[i].data }))
+    .filter((x): x is { a: (typeof ativos)[number]; pacote: NonNullable<typeof x.pacote> } => !!x.pacote);
+  const regsCredito = await Promise.all(
+    comPacote.map(({ a, pacote }) =>
+      buscaRegistros(supabase, {
+        alunoId: a.id,
+        depoisDe: pacote.created_at.slice(0, 10),
+        ate: sp.iso,
+      }),
+    ),
+  );
+  comPacote.forEach(({ a, pacote }, i) => {
+    const compraIso = pacote.created_at.slice(0, 10);
+    itemPorAluno.set(
+      a.id,
+      montaItemCreditos(
+        a,
+        saldoCreditos({
+          qtdCompradas: pacote.qtd_aulas,
+          diasSemana: a.dias_semana,
+          compraIso,
+          hojeIso: sp.iso,
+          registros: regsCredito[i],
+        }),
+        { qtd: pacote.qtd_aulas, valor: Number(pacote.valor) },
+      ),
+    );
+  });
+  // Créditos sem pacote ainda.
+  for (const a of creditoAlunos) {
+    if (!itemPorAluno.has(a.id)) itemPorAluno.set(a.id, montaItemCreditos(a, null, null));
+  }
+
+  // Reconstrói na ordem original (alfabética do select).
+  const itens: CobrancaItemVM[] = ativos
+    .map((a) => itemPorAluno.get(a.id))
+    .filter((x): x is CobrancaItemVM => !!x);
 
   return (
     <div className="relative flex flex-1 flex-col px-5 pt-12">

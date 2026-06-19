@@ -8,10 +8,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { criarAlunosEmLote, type LinhaLote } from "@/app/actions/alunos";
-import { DiasSemanaChips } from "@/components/DiasSemanaChips";
+import { DiasHorarios } from "@/components/DiasHorarios";
 
 function linhaVazia(): LinhaLote {
-  return { nome: "", valor: "", modo: "mensalidade", dias: [], horario: "" };
+  return { nome: "", valor: "", modo: "mensalidade", horarios: {} };
 }
 
 export default function NovoAlunosPage() {
@@ -91,27 +91,18 @@ export default function NovoAlunosPage() {
               )}
             </div>
 
-            <div className="mt-3 flex items-center gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-1 rounded-xl bg-surface-soft px-3 py-2">
-                <span className="text-sm text-text-muted">R$</span>
-                <input
-                  value={l.valor}
-                  onChange={(e) => muda(i, { valor: e.target.value })}
-                  placeholder={l.modo === "por_aula" ? "80" : "300"}
-                  inputMode="decimal"
-                  className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
-                />
-                {l.modo === "por_aula" && (
-                  <span className="shrink-0 text-xs text-text-muted">/aula</span>
-                )}
-              </div>
+            <div className="mt-3 flex items-center gap-1 rounded-xl bg-surface-soft px-3 py-2.5">
+              <span className="text-sm text-text-muted">R$</span>
               <input
-                type="time"
-                value={l.horario}
-                onChange={(e) => muda(i, { horario: e.target.value })}
-                aria-label="Horário (opcional)"
-                className="shrink-0 rounded-xl bg-surface-soft px-2.5 py-1.5 text-sm text-text outline-none"
+                value={l.valor}
+                onChange={(e) => muda(i, { valor: e.target.value })}
+                placeholder={l.modo === "por_aula" ? "80" : "300"}
+                inputMode="decimal"
+                className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none placeholder:text-text-muted"
               />
+              {l.modo === "por_aula" && (
+                <span className="shrink-0 text-xs text-text-muted">/aula</span>
+              )}
             </div>
 
             <div className="mt-3 grid grid-cols-3 rounded-xl bg-surface-soft p-1">
@@ -136,7 +127,10 @@ export default function NovoAlunosPage() {
             </div>
 
             <div className="mt-3">
-              <DiasSemanaChips value={l.dias} onChange={(dias) => muda(i, { dias })} />
+              <DiasHorarios
+                value={l.horarios}
+                onChange={(horarios) => muda(i, { horarios })}
+              />
             </div>
           </div>
         ))}

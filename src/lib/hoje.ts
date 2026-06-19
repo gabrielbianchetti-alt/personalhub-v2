@@ -2,7 +2,7 @@
 // registros_aula (só exceções) + dias_resolvidos.
 
 import type { Aluno, RegistroAula } from "./tipos";
-import { addDias, dowDeIso, horarioCurto } from "./datas";
+import { addDias, dowDeIso, horarioDoDia } from "./datas";
 
 export interface AlunoHojeVM {
   id: string;
@@ -25,7 +25,7 @@ export interface PendenciaVM {
 }
 
 export function montaAlunosHoje(
-  ativos: Pick<Aluno, "id" | "nome" | "horario" | "dias_semana">[],
+  ativos: Pick<Aluno, "id" | "nome" | "horario" | "horarios" | "dias_semana">[],
   registrosHoje: Pick<RegistroAula, "aluno_id" | "tipo" | "quantidade">[],
   dowHoje: number,
 ): AlunoHojeVM[] {
@@ -40,19 +40,19 @@ export function montaAlunosHoje(
 
   const esperados = ativos
     .filter((a) => a.dias_semana.includes(dowHoje))
-    .sort(
-      (a, b) =>
-        (a.horario ?? "99").localeCompare(b.horario ?? "99") ||
-        a.nome.localeCompare(b.nome),
-    )
     .map((a) => ({
       id: a.id,
       nome: a.nome,
-      horario: horarioCurto(a.horario),
+      horario: horarioDoDia(a, dowHoje), // hora DAQUELE dia (não a única)
       faltou: faltas.has(a.id),
       extras: extras.get(a.id) ?? 0,
       avulso: false,
-    }));
+    }))
+    .sort(
+      (a, b) =>
+        (a.horario || "99").localeCompare(b.horario || "99") ||
+        a.nome.localeCompare(b.nome),
+    );
 
   const idsEsperados = new Set(esperados.map((a) => a.id));
   const avulsos = ativos

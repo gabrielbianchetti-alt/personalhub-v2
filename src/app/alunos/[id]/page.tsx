@@ -16,7 +16,7 @@ export default async function AlunoPage({
   const { data: aluno } = await supabase
     .from("alunos")
     .select(
-      "id, nome, valor_mensal, modo_cobranca, dias_semana, horario, telefone, status, detalhes",
+      "id, nome, valor_mensal, modo_cobranca, dias_semana, horarios, horario, telefone, status, detalhes",
     )
     .eq("id", id)
     .maybeSingle();

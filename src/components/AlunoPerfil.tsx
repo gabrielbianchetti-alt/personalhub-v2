@@ -12,7 +12,7 @@ import {
   mudarStatusAluno,
   type CamposAluno,
 } from "@/app/actions/alunos";
-import { DiasSemanaChips } from "@/components/DiasSemanaChips";
+import { DiasHorarios } from "@/components/DiasHorarios";
 import { horarioCurto } from "@/lib/datas";
 import type { ModoCobranca, AlunoStatus } from "@/lib/tipos";
 
@@ -22,10 +22,23 @@ interface AlunoDados {
   valor_mensal: number | null;
   modo_cobranca: ModoCobranca;
   dias_semana: number[];
+  horarios: Record<string, string> | null;
   horario: string | null;
   telefone: string | null;
   status: AlunoStatus;
   detalhes: { observacoes?: string; data_inicio?: string };
+}
+
+// Monta o mapa dia->hora do estado inicial: usa horarios; se vazio (aluno
+// pré-0007), cai no horário único legado pra cada dia marcado.
+function horariosIniciais(a: AlunoDados): Record<string, string> {
+  if (a.horarios && Object.keys(a.horarios).length > 0) {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(a.horarios)) out[k] = (v ?? "").slice(0, 5);
+    return out;
+  }
+  const hora = horarioCurto(a.horario);
+  return Object.fromEntries(a.dias_semana.map((d) => [String(d), hora]));
 }
 
 export function AlunoPerfil({
@@ -40,8 +53,7 @@ export function AlunoPerfil({
     nome: aluno.nome,
     valor: String(aluno.valor_mensal ?? "").replace(".", ","),
     modo: aluno.modo_cobranca,
-    dias: aluno.dias_semana,
-    horario: horarioCurto(aluno.horario),
+    horarios: horariosIniciais(aluno),
     telefone: aluno.telefone ?? "",
     observacoes: aluno.detalhes?.observacoes ?? "",
     dataInicio: aluno.detalhes?.data_inicio ?? "",
@@ -137,33 +149,20 @@ export function AlunoPerfil({
           />
         </label>
 
-        <div className="flex items-center gap-2">
-          <label className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-              Valor{campos.modo === "por_aula" ? " da aula" : ""}
-            </span>
-            <div className="flex items-center gap-1 rounded-xl bg-surface-soft px-3 py-2.5">
-              <span className="text-sm text-text-muted">R$</span>
-              <input
-                value={campos.valor}
-                onChange={(e) => muda({ valor: e.target.value })}
-                inputMode="decimal"
-                className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none"
-              />
-            </div>
-          </label>
-          <label className="flex shrink-0 flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-              Horário
-            </span>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Valor{campos.modo === "por_aula" ? " da aula" : ""}
+          </span>
+          <div className="flex items-center gap-1 rounded-xl bg-surface-soft px-3 py-2.5">
+            <span className="text-sm text-text-muted">R$</span>
             <input
-              type="time"
-              value={campos.horario}
-              onChange={(e) => muda({ horario: e.target.value })}
-              className="rounded-xl bg-surface-soft px-2.5 py-2.5 text-sm text-text outline-none"
+              value={campos.valor}
+              onChange={(e) => muda({ valor: e.target.value })}
+              inputMode="decimal"
+              className="w-full min-w-0 bg-transparent text-[15px] text-text outline-none"
             />
-          </label>
-        </div>
+          </div>
+        </label>
 
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
@@ -195,9 +194,12 @@ export function AlunoPerfil({
 
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-            Dias
+            Dias e horários
           </span>
-          <DiasSemanaChips value={campos.dias} onChange={(dias) => muda({ dias })} />
+          <DiasHorarios
+            value={campos.horarios}
+            onChange={(horarios) => muda({ horarios })}
+          />
         </div>
 
         <label className="flex flex-col gap-1">

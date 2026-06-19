@@ -15,7 +15,8 @@ export interface Aluno {
   valor_mensal: number | null;
   modo_cobranca: ModoCobranca;
   dias_semana: number[]; // 0=dom … 6=sáb (convenção getDay)
-  horario: string | null; // "HH:MM:SS" do Postgres
+  horarios: Record<string, string>; // diaSemana(0..6) -> "HH:MM" (por dia)
+  horario: string | null; // legado/fallback (um time só) — migração 0007
   telefone: string | null;
   status: AlunoStatus;
   detalhes: { observacoes?: string; data_inicio?: string };
