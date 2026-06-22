@@ -193,8 +193,16 @@ export function ConfigClient({
           </p>
         </div>
 
-        {erro && <p className="text-sm text-danger">{erro}</p>}
-        {salvo && <p className="text-sm text-success">Salvo ✓</p>}
+        {erro && (
+          <p role="alert" className="text-sm text-danger">
+            {erro}
+          </p>
+        )}
+        {salvo && (
+          <p role="status" aria-live="polite" className="text-sm text-success">
+            Salvo ✓
+          </p>
+        )}
         <button
           type="button"
           disabled={pending}

@@ -3,7 +3,7 @@
 // Bottom sheet glass genérico (§6.4 — sheets/modais são lugar sancionado de glass).
 // Fecha com Esc e trava o scroll da página enquanto aberto.
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Portal } from "./Portal";
@@ -19,6 +19,9 @@ export function Sheet({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const painelRef = useRef<HTMLDivElement>(null);
+  const gatilhoRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
     const aoTeclar = (e: KeyboardEvent) => {
@@ -32,6 +35,39 @@ export function Sheet({
       document.body.style.overflow = overflowAnterior;
     };
   }, [open, onClose]);
+
+  // Foco gerenciado (modal a11y): leva o foco pra dentro ao abrir, prende o Tab
+  // no sheet e devolve o foco ao gatilho ao fechar.
+  useEffect(() => {
+    if (!open) return;
+    gatilhoRef.current = document.activeElement as HTMLElement | null;
+    const focaveis = () =>
+      Array.from(
+        painelRef.current?.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input:not([disabled]),textarea,select,[tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    (focaveis()[0] ?? painelRef.current)?.focus();
+    const onTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const f = focaveis();
+      if (f.length === 0) return;
+      const primeiro = f[0];
+      const ultimo = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primeiro.focus();
+      }
+    };
+    document.addEventListener("keydown", onTab);
+    return () => {
+      document.removeEventListener("keydown", onTab);
+      gatilhoRef.current?.focus?.();
+    };
+  }, [open]);
 
   return (
     <Portal>
@@ -53,10 +89,12 @@ export function Sheet({
       {/* Aberto fica SEM transform: ancestral com transform desliga o
           backdrop-filter do glass no Chromium (o blur parava de agir). */}
       <div
+        ref={painelRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px] transition-transform duration-300 ease-out ${
+        tabIndex={-1}
+        className={`absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px] outline-none transition-transform duration-300 ease-out ${
           open ? "" : "translate-y-full"
         }`}
       >

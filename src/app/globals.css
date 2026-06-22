@@ -80,6 +80,22 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Foco visível no teclado: o app usa outline-none em todo lugar (bom p/ mouse/
+   toque, péssimo p/ teclado). :focus-visible só dispara na navegação por
+   teclado — devolve o anel sem afetar quem usa o dedo. Unlayered vence o
+   outline-none (utility em layer) do Tailwind v4. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Selo de carimbo — "PAGO" estampado no card quitado e no recibo. */
 .selo {
   display: inline-flex;

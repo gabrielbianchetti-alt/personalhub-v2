@@ -96,6 +96,18 @@ export async function salvarAjuste(
 export async function marcarEnviado(alunoId: string, mesRef: string) {
   validaMes(mesRef);
   const ctx = await professorAtual();
+  // Não rebaixar um fechamento já PAGO (concorrência: 2 aparelhos no mesmo mês,
+  // um com a tela velha marcaria "enviado" por cima do "pago").
+  const { data: atual } = await ctx.supabase
+    .from("fechamentos")
+    .select("status")
+    .eq("aluno_id", alunoId)
+    .eq("mes_referencia", mesRef)
+    .maybeSingle();
+  if (atual?.status === "pago") {
+    revalidatePath("/cobranca");
+    return;
+  }
   const snap = await snapshotMensalidade(ctx, alunoId, mesRef);
   const { error } = await ctx.supabase.from("fechamentos").upsert(
     { ...snap, status: "enviado", enviado_em: new Date().toISOString() },

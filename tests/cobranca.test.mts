@@ -139,7 +139,7 @@ test("resumoMes soma mensalidade + por_aula e deixa créditos de fora", () => {
   );
   const creditos = montaItemCreditos(
     { id: "a3", nome: "Pedro", telefone: null },
-    4,
+    { qtd: 10, usadas: 6, agendadas: 0, restantes: 4 },
     { qtd: 10, valor: 600 },
   );
   const r = resumoMes([mensal, porAula, creditos]);

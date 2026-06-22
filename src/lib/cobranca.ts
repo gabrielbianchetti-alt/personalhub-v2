@@ -40,6 +40,8 @@ export interface CobrancaItemVM {
   saldo: number | null;
   progresso: ProgressoPacote | null;
   ultimoPacote: { qtd: number; valor: number } | null;
+  /** aluno suspenso mas com fechamento no mês — mostrado p/ não sumir receita */
+  suspenso?: boolean;
 }
 
 /** Mensalidade e por_aula fecham mês igual; muda só a fórmula do valor. */

@@ -9,12 +9,14 @@ export function CheckinCard({
   isNext,
   onToggleFalta,
   onTirarExtra,
+  onCancelarPacote,
 }: {
   aluno: AlunoHojeVM;
   isPast: boolean;
   isNext: boolean;
   onToggleFalta: (id: string) => void;
   onTirarExtra: (id: string) => void;
+  onCancelarPacote?: (registroId: string, alunoId: string) => void;
 }) {
   const subtitle = aluno.pacote
     ? aluno.horario || "Aula do pacote"
@@ -72,8 +74,21 @@ export function CheckinCard({
         </div>
       </div>
 
-      {/* Pacote: aula já consumiu o crédito (no-show paga) — sem "Faltou".
-          Demais: corrigir é sempre possível, o chip permanece mesmo no passado. */}
+      {/* Pacote: aula já consumiu o crédito (no-show paga) — sem "Faltou", mas
+          dá pra cancelar (lançou por engano) e devolver o crédito sem sair do Hoje. */}
+      {aluno.pacote && aluno.pacoteRegistroId && onCancelarPacote && (
+        <button
+          type="button"
+          onClick={() => onCancelarPacote(aluno.pacoteRegistroId!, aluno.id)}
+          aria-label={`Cancelar aula de pacote de ${aluno.nome}`}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-soft px-3.5 py-2.5 text-sm font-medium text-text-muted active:bg-danger/10 active:text-danger"
+        >
+          <X size={16} strokeWidth={2.4} />
+          Cancelar
+        </button>
+      )}
+
+      {/* Demais: corrigir é sempre possível, o chip permanece mesmo no passado. */}
       {!aluno.pacote && (
         <button
           type="button"

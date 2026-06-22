@@ -138,6 +138,31 @@ export default async function CobrancaPage({
     .map((a) => itemPorAluno.get(a.id))
     .filter((x): x is CobrancaItemVM => !!x);
 
+  // Suspensos que ainda têm fechamento neste mês: não somem da Cobrança nem do
+  // "Recebido" — dinheiro já trabalhado/quitado não pode evaporar ao suspender.
+  const ativosIds = new Set(ativos.map((a) => a.id));
+  const suspensosIds = [...fechamentos.keys()].filter((id) => !ativosIds.has(id));
+  if (suspensosIds.length > 0) {
+    const { data: susp } = await supabase
+      .from("alunos")
+      .select("id, nome, telefone, valor_mensal, modo_cobranca, dias_semana")
+      .in("id", suspensosIds);
+    const itensSuspensos = (susp ?? [])
+      .filter((a) => a.modo_cobranca !== "creditos")
+      .map((a) => ({
+        ...montaItemFechamento(
+          a,
+          registros.filter((r) => r.aluno_id === a.id),
+          fechamentos.get(a.id) ?? null,
+          year,
+          month,
+        ),
+        suspenso: true,
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+    itens.push(...itensSuspensos);
+  }
+
   return (
     <div className="relative flex flex-1 flex-col px-5 pt-12">
       <div className="camada-ambiente" aria-hidden="true">

@@ -1,8 +1,8 @@
 // View-model da tela Hoje, montado no servidor a partir de alunos +
 // registros_aula (só exceções) + dias_resolvidos.
 
-import type { Aluno, RegistroAula } from "./tipos";
-import { addDias, dowDeIso, horarioDoDia } from "./datas";
+import type { Aluno, RegistroAula } from "./tipos.ts";
+import { addDias, dowDeIso, horarioDoDia } from "./datas.ts";
 
 export interface AlunoHojeVM {
   id: string;
@@ -14,9 +14,12 @@ export interface AlunoHojeVM {
   avulso: boolean;
   /** aula de PACOTE marcada pra hoje (sem "Faltou"; já consumiu o crédito) */
   pacote?: boolean;
+  /** id do registro da aula de pacote — permite cancelar direto no Hoje */
+  pacoteRegistroId?: string;
 }
 
 export interface AulaPacoteHoje {
+  id: string;
   aluno_id: string;
   horario: string | null;
 }
@@ -86,6 +89,7 @@ export function montaAlunosHoje(
       extras: 0,
       avulso: false,
       pacote: true,
+      pacoteRegistroId: p.id,
     }));
 
   return [...esperados, ...pacoteHoje, ...avulsos].sort(

@@ -10,6 +10,7 @@ import {
   adicionarExtra,
   removerExtra,
 } from "@/app/actions/registros";
+import { cancelarAulaPacote } from "@/app/actions/pacote";
 import { CheckinCard } from "./CheckinCard";
 import { ExtraSheet } from "./ExtraSheet";
 import { Pendencias } from "./Pendencias";
@@ -96,6 +97,18 @@ export function CheckinList({
     persistir(() => adicionarExtra(rosterId, hojeIso), desfazer);
   };
 
+  // Aula de pacote lançada por engano: cancelar devolve o crédito, sem sair do Hoje.
+  const cancelarPacote = (registroId: string, alunoId: string) => {
+    const atual = alunos.find((a) => a.pacoteRegistroId === registroId);
+    if (!atual) return;
+    vibra();
+    setAlunos((prev) => prev.filter((a) => a.pacoteRegistroId !== registroId));
+    persistir(
+      () => cancelarAulaPacote(registroId, alunoId),
+      () => setAlunos((prev) => [...prev, atual]),
+    );
+  };
+
   const tirarExtra = (id: string) => {
     const atual = alunos.find((a) => a.id === id);
     if (!atual || atual.extras === 0) return;
@@ -128,7 +141,10 @@ export function CheckinList({
       {pendencias.length > 0 && <Pendencias pendencias={pendencias} />}
 
       {erro && (
-        <p className="mx-5 mb-3 rounded-2xl bg-danger/10 px-4 py-2.5 text-sm text-danger">
+        <p
+          role="alert"
+          className="mx-5 mb-3 rounded-2xl bg-danger/10 px-4 py-2.5 text-sm text-danger"
+        >
           {erro}
         </p>
       )}
@@ -177,6 +193,7 @@ export function CheckinList({
                 isNext={i === proximoIdx}
                 onToggleFalta={toggleFalta}
                 onTirarExtra={tirarExtra}
+                onCancelarPacote={cancelarPacote}
               />
             </Fragment>
           ))}

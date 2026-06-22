@@ -41,7 +41,7 @@ export default async function HojePage() {
     ativos,
     registros.filter((r) => r.data === sp.iso),
     sp.dow,
-    aulasPacoteHoje.map((a) => ({ aluno_id: a.aluno_id, horario: a.horario })),
+    aulasPacoteHoje.map((a) => ({ id: a.id, aluno_id: a.aluno_id, horario: a.horario })),
   );
   // Se dias_resolvidos ainda não existe (pré-0004), não mostra pendências —
   // melhor que uma pergunta impossível de dispensar.

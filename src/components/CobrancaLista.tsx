@@ -232,7 +232,11 @@ export function CobrancaLista({
     <>
       {toast && (
         <Portal>
-          <div className="fixed inset-x-0 bottom-24 z-[65] mx-auto flex max-w-[430px] px-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed inset-x-0 bottom-24 z-[65] mx-auto flex max-w-[430px] px-4"
+          >
             <div className="flex w-full items-center justify-between gap-3 rounded-2xl bg-text px-4 py-3 text-bg shadow-soft">
               <span className="text-sm leading-snug">{toast.msg}</span>
               {toast.acao && (
@@ -255,7 +259,11 @@ export function CobrancaLista({
 
       {festa && (
         <Portal>
-          <div className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center">
+          <div
+            role="status"
+            aria-live="polite"
+            className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center"
+          >
             <div className="glass rounded-2xl border border-glass-border px-9 py-7 shadow-soft">
               <span className="selo selo-grande text-accent">Mês fechado</span>
             </div>
@@ -328,7 +336,10 @@ export function CobrancaLista({
       </div>
 
       {erro && (
-        <p className="mt-3 rounded-2xl bg-danger/10 px-4 py-2.5 text-sm text-danger">
+        <p
+          role="alert"
+          className="mt-3 rounded-2xl bg-danger/10 px-4 py-2.5 text-sm text-danger"
+        >
           {erro}
         </p>
       )}
@@ -343,7 +354,11 @@ export function CobrancaLista({
               className="relative rounded-[14px] bg-surface p-4 shadow-soft"
             >
               {celebrando === item.alunoId && (
-                <div className="celebra pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[14px] bg-surface/80">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="celebra pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[14px] bg-surface/80"
+                >
                   <span className="selo selo-grande text-success">Enviado</span>
                 </div>
               )}
@@ -357,7 +372,14 @@ export function CobrancaLista({
                     />
                   )}
                   <div className="min-w-0">
-                    <p className="truncate text-base font-medium text-text">{item.nome}</p>
+                    <p className="flex items-center gap-1.5 truncate text-base font-medium text-text">
+                      {item.nome}
+                      {item.suspenso && (
+                        <span className="shrink-0 rounded-full bg-surface-soft px-2 py-0.5 text-xs font-normal text-text-muted">
+                          suspenso
+                        </span>
+                      )}
+                    </p>
                     <p className="mt-0.5 truncate text-sm text-text-muted" title={item.resumo}>
                       {item.resumo}
                     </p>
