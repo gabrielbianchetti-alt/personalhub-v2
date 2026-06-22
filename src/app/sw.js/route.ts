@@ -1,16 +1,17 @@
-// Service worker mínimo do PersonalHub (PWA-ready, §7).
-// Objetivo: abrir o app instalado sem rede e dar um fallback honesto — NÃO é
-// fila de sincronização (fase 2). Princípios:
-//   - Navegações (HTML): network-first; sem rede → página /offline. NUNCA
-//     cacheia a resposta de navegação (são páginas autenticadas com dados do
-//     aluno — não podem ficar em cache).
-//   - Assets imutáveis (/_next/static, ícones): cache-first (hash no nome).
-//   - Só GET e só same-origin. Requests ao Supabase (outra origem) passam direto.
-const CACHE = "personalhub-v2";
+// Serve o /sw.js com o nome do cache VERSIONADO por build (SHA do commit na
+// Vercel). Assim cada deploy muda os bytes do SW → o navegador reinstala → o
+// activate purga o cache antigo, e nenhum asset não-hashado congela entre
+// versões. (Antes era public/sw.js estático: byte-idêntico em todo deploy, o SW
+// nunca reinstalava e o activate virava no-op.)
+
+export const dynamic = "force-static";
+
+const VERSAO = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ?? "dev";
+
+const SW = `// Service worker do PersonalHub (gerado por /sw.js com versão de build).
+const CACHE = "personalhub-${VERSAO}";
 const ESSENCIAIS = ["/offline", "/icon.svg", "/manifest.webmanifest"];
 
-// Fallback de último recurso se /offline não estiver no cache (precache falhou):
-// melhor um aviso honesto que a tela de erro do navegador.
 const OFFLINE_HTML =
   '<!doctype html><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -28,7 +29,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      // allSettled: um asset indisponível não impede a instalação.
       await Promise.allSettled(ESSENCIAIS.map((url) => cache.add(url)));
       await self.skipWaiting();
     })(),
@@ -49,16 +49,13 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return; // Supabase etc. passam direto
+  if (url.origin !== self.location.origin) return;
 
-  // Navegação: network-first, fallback /offline. Sem cache da resposta
-  // (são páginas autenticadas com dados do aluno).
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => respostaOffline()));
     return;
   }
 
-  // Chunks do Next: nome com hash = imutável → cache-first.
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
       (async () => {
@@ -72,9 +69,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Ícones (sem hash na URL): stale-while-revalidate — rápido do cache, mas
-  // atualiza em segundo plano pra não congelar a arte entre deploys.
-  if (/^\/icon(-\d+)?\.(svg|png)$/.test(url.pathname)) {
+  if (/^\\/icon(-\\d+)?\\.(svg|png)$/.test(url.pathname)) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE);
@@ -90,3 +85,14 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+`;
+
+export function GET() {
+  return new Response(SW, {
+    headers: {
+      "Content-Type": "text/javascript; charset=utf-8",
+      "Service-Worker-Allowed": "/",
+      "Cache-Control": "no-cache",
+    },
+  });
+}

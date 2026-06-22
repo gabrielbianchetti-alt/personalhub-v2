@@ -6,6 +6,10 @@ export type ModoCobranca = "mensalidade" | "por_aula" | "creditos";
 export type AlunoStatus = "ativo" | "suspenso";
 // falta/extra/desmarcada = exceções de aluno com agenda fixa.
 // aula = aula marcada de aluno de PACOTE (sem agenda fixa; cada aula é evento).
+// NOTA: `desmarcada` é RESERVADO p/ v2.x — não é código morto. O motor já
+// agrega/desconta corretamente, mas o spec adia "desmarcação com reposição é
+// neutra" + regra configurável por professor (§5) p/ v2.x; por isso ainda não
+// há UI de check-in pra registrá-la, de propósito.
 export type RegistroTipo = "falta" | "extra" | "desmarcada" | "aula";
 export type RegistroOrigem = "checkin" | "retroativo" | "ajuste";
 export type FechamentoStatus = "aberto" | "enviado" | "pago";
