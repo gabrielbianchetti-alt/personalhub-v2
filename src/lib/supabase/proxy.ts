@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Rotas públicas (não exigem sessão).
-const PUBLIC_PATHS = ["/login", "/atualizar-senha"];
+// Rotas públicas (não exigem sessão). /offline é o fallback do service worker:
+// precisa ser público pra o precache gravar a página certa (e não a de login).
+const PUBLIC_PATHS = ["/login", "/atualizar-senha", "/offline"];
 
 // Renova a sessão a cada request e protege as rotas do app.
 // Padrão @supabase/ssr para App Router (adaptado a proxy.ts / Next 16).

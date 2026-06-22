@@ -3,6 +3,7 @@ import { Geist_Mono, IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { SwipeCarrossel } from "@/components/SwipeCarrossel";
+import { RegistraSW } from "@/components/RegistraSW";
 
 // Identidade CARIMBO (§6.3): grotesk com opinião nos títulos…
 const schibsted = Schibsted_Grotesk({
@@ -74,6 +75,7 @@ export default function RootLayout({
           </main>
         </div>
         <BottomTabBar />
+        <RegistraSW />
       </body>
     </html>
   );
