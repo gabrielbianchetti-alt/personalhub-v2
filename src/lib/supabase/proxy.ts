@@ -31,10 +31,13 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANTE: não inserir lógica entre criar o client e getUser().
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANTE: não inserir lógica entre criar o client e a verificação.
+  // getClaims (não getUser): com chaves JWT assimétricas valida o token
+  // LOCALMENTE — sem ida à rede em toda request (proxy roda em tudo). Com
+  // simétricas, cai no mesmo caminho do getUser (sem regressão). Refresca a
+  // sessão igual e só precisamos da existência do usuário pra proteger rotas.
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims ?? null;
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));

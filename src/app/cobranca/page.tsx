@@ -93,44 +93,50 @@ export default async function CobrancaPage({
     }
   }
 
-  // Créditos: antes era 2 queries SEQUENCIAIS por aluno (waterfall). Agora
-  // o pacote mais recente de cada um em paralelo, depois os registros em
-  // paralelo — saldo derivado desde a compra.
-  const pacotes = await Promise.all(
-    creditoAlunos.map((a) =>
-      supabase
+  // Créditos: 2 queries no total (antes eram 2×N round-trips). 1) o pacote mais
+  // recente de CADA aluno (ordena desc, pega o 1º por aluno em JS); 2) todas as
+  // aulas de pacote desde a compra mais antiga — agrupadas e filtradas por aluno.
+  const creditoIds = creditoAlunos.map((a) => a.id);
+  const { data: pacotesData } = creditoIds.length
+    ? await supabase
         .from("pacotes_creditos")
-        .select("qtd_aulas, valor, created_at")
-        .eq("aluno_id", a.id)
+        .select("aluno_id, qtd_aulas, valor, created_at")
+        .in("aluno_id", creditoIds)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ),
-  );
-  const comPacote = creditoAlunos
-    .map((a, i) => ({ a, pacote: pacotes[i].data }))
-    .filter((x): x is { a: (typeof ativos)[number]; pacote: NonNullable<typeof x.pacote> } => !!x.pacote);
-  const aulasCredito = await Promise.all(
-    comPacote.map(({ a, pacote }) =>
-      buscaAulasPacote(supabase, {
-        alunoId: a.id,
-        de: pacote.created_at.slice(0, 10),
-      }),
-    ),
-  );
-  comPacote.forEach(({ a, pacote }, i) => {
+    : { data: [] };
+  const pacotePorAluno = new Map<
+    string,
+    { qtd_aulas: number; valor: number; created_at: string }
+  >();
+  for (const p of pacotesData ?? [])
+    if (!pacotePorAluno.has(p.aluno_id)) pacotePorAluno.set(p.aluno_id, p);
+
+  const compras = [...pacotePorAluno.values()].map((p) => p.created_at.slice(0, 10)).sort();
+  const todasAulas = compras.length
+    ? await buscaAulasPacote(supabase, { de: compras[0] })
+    : [];
+  const aulasPorAluno = new Map<string, { data: string }[]>();
+  for (const aula of todasAulas) {
+    const arr = aulasPorAluno.get(aula.aluno_id) ?? [];
+    arr.push(aula);
+    aulasPorAluno.set(aula.aluno_id, arr);
+  }
+
+  for (const a of creditoAlunos) {
+    const pacote = pacotePorAluno.get(a.id);
+    if (!pacote) {
+      itemPorAluno.set(a.id, montaItemCreditos(a, null, null));
+      continue;
+    }
+    const compraIso = pacote.created_at.slice(0, 10);
+    const aulas = (aulasPorAluno.get(a.id) ?? []).filter((x) => x.data >= compraIso);
     itemPorAluno.set(
       a.id,
-      montaItemCreditos(
-        a,
-        progressoPacote(pacote.qtd_aulas, aulasCredito[i], ateData),
-        { qtd: pacote.qtd_aulas, valor: Number(pacote.valor) },
-      ),
+      montaItemCreditos(a, progressoPacote(pacote.qtd_aulas, aulas, ateData), {
+        qtd: pacote.qtd_aulas,
+        valor: Number(pacote.valor),
+      }),
     );
-  });
-  // Créditos sem pacote ainda.
-  for (const a of creditoAlunos) {
-    if (!itemPorAluno.has(a.id)) itemPorAluno.set(a.id, montaItemCreditos(a, null, null));
   }
 
   // Reconstrói na ordem original (alfabética do select).
