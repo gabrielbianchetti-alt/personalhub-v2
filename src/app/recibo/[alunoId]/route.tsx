@@ -2,6 +2,7 @@
 // com a identidade soft-warm, pronta pra mandar no WhatsApp.
 // GET /recibo/:alunoId?mes=YYYY-MM-01 — protegido por sessão + RLS.
 
+import { readFile } from "node:fs/promises";
 import { ImageResponse } from "next/og";
 import { createClient } from "@/lib/supabase/server";
 import { buscaRegistros } from "@/lib/supabase/registros";
@@ -68,6 +69,14 @@ export async function GET(
   const professor = profRes.data?.nome ?? "Personal trainer";
   const pago = item.status === "pago";
 
+  // Fontes da marca (Satori precisa do binário TTF). Carregadas do bundle via
+  // import.meta.url — o Next as inclui no deploy.
+  const [schibsted400, schibsted700, geistMono600] = await Promise.all([
+    readFile(new URL("./SchibstedGrotesk-400.ttf", import.meta.url)),
+    readFile(new URL("./SchibstedGrotesk-700.ttf", import.meta.url)),
+    readFile(new URL("./GeistMono-600.ttf", import.meta.url)),
+  ]);
+
   return new ImageResponse(
     (
       <div
@@ -80,7 +89,7 @@ export async function GET(
           backgroundColor: "#F6F7F9",
           padding: 96,
           position: "relative",
-          fontFamily: "sans-serif",
+          fontFamily: "Schibsted Grotesk",
         }}
       >
         {/* respiro teal no topo — degradê suave, sem blur (satori não filtra) */}
@@ -143,16 +152,17 @@ export async function GET(
           <div
             style={{
               fontSize: 142,
-              fontWeight: 700,
+              fontWeight: 600,
               color: "#0E1013",
               letterSpacing: -4,
+              fontFamily: "Geist Mono",
             }}
           >
             {formatBRL(item.valor)}
           </div>
           <div style={{ fontSize: 40, color: "#5A6472" }}>{item.resumo}</div>
           {item.valorAula !== null && (
-            <div style={{ fontSize: 32, color: "#5A6472" }}>
+            <div style={{ fontSize: 32, color: "#5A6472", fontFamily: "Geist Mono" }}>
               {`${formatBRL(item.valorAula)} por aula`}
             </div>
           )}
@@ -196,6 +206,14 @@ export async function GET(
         </div>
       </div>
     ),
-    { width: 1080, height: 1350 },
+    {
+      width: 1080,
+      height: 1350,
+      fonts: [
+        { name: "Schibsted Grotesk", data: schibsted400, weight: 400, style: "normal" },
+        { name: "Schibsted Grotesk", data: schibsted700, weight: 700, style: "normal" },
+        { name: "Geist Mono", data: geistMono600, weight: 600, style: "normal" },
+      ],
+    },
   );
 }

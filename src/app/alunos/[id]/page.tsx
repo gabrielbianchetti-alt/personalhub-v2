@@ -1,9 +1,18 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buscaAulasPacote } from "@/lib/supabase/registros";
-import { agoraSP } from "@/lib/datas";
-import { progressoPacote, type ProgressoPacote } from "@/lib/aulas";
-import { AlunoPerfil, type AulaPacoteVM } from "@/components/AlunoPerfil";
+import { buscaAulasPacote, buscaRegistros } from "@/lib/supabase/registros";
+import { agoraSP, mesRefIso, nomeMes } from "@/lib/datas";
+import {
+  agregaExcecoes,
+  contagemMes,
+  progressoPacote,
+  type ProgressoPacote,
+} from "@/lib/aulas";
+import {
+  AlunoPerfil,
+  type AulaPacoteVM,
+  type HistoricoVM,
+} from "@/components/AlunoPerfil";
 
 export default async function AlunoPage({
   params,
@@ -16,7 +25,7 @@ export default async function AlunoPage({
   const { data: aluno } = await supabase
     .from("alunos")
     .select(
-      "id, nome, valor_mensal, modo_cobranca, dias_semana, horarios, horario, telefone, status, detalhes",
+      "id, nome, valor_mensal, modo_cobranca, dias_semana, horarios, horario, telefone, status, detalhes, created_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -48,12 +57,42 @@ export default async function AlunoPage({
     }
   }
 
+  // Mini-histórico (mensalidade/por_aula): frequência do mês + últimas faltas.
+  let historico: HistoricoVM | null = null;
+  if (aluno.modo_cobranca !== "creditos") {
+    const sp = agoraSP();
+    const mesRef = mesRefIso(sp.year, sp.month);
+    const regs = await buscaRegistros(supabase, { alunoId: id, de: mesRef, ate: sp.iso });
+    const exc = agregaExcecoes(regs);
+    const cont = contagemMes(aluno.dias_semana, sp.year, sp.month, exc);
+    const ultimasFaltas = regs
+      .filter((r) => r.tipo === "falta")
+      .map((r) => r.data)
+      .sort()
+      .reverse()
+      .slice(0, 3)
+      .map((d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`);
+    const desdeIso = aluno.detalhes?.data_inicio || aluno.created_at?.slice(0, 10) || null;
+    const desde = desdeIso
+      ? `${nomeMes(Number(desdeIso.slice(5, 7)) - 1)} de ${desdeIso.slice(0, 4)}`
+      : null;
+    historico = {
+      nomeMes: nomeMes(sp.month),
+      realizadas: cont.realizadas,
+      faltas: exc.faltas,
+      extras: exc.extras,
+      ultimasFaltas,
+      desde,
+    };
+  }
+
   return (
     <AlunoPerfil
       aluno={aluno}
       progresso={progresso}
       aulasPacote={aulas}
       temPacote={temPacote}
+      historico={historico}
     />
   );
 }

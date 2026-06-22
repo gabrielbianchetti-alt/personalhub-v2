@@ -26,6 +26,15 @@ export interface AulaPacoteVM {
   horario: string; // "HH:MM" ou ""
 }
 
+export interface HistoricoVM {
+  nomeMes: string;
+  realizadas: number;
+  faltas: number;
+  extras: number;
+  ultimasFaltas: string[]; // ["03/06", "19/05"]
+  desde: string | null; // "junho de 2026"
+}
+
 interface AlunoDados {
   id: string;
   nome: string;
@@ -56,11 +65,13 @@ export function AlunoPerfil({
   progresso,
   aulasPacote,
   temPacote,
+  historico,
 }: {
   aluno: AlunoDados;
   progresso: ProgressoPacote | null;
   aulasPacote: AulaPacoteVM[];
   temPacote: boolean;
+  historico: HistoricoVM | null;
 }) {
   const router = useRouter();
   const ehPacote = aluno.modo_cobranca === "creditos";
@@ -146,6 +157,8 @@ export function AlunoPerfil({
           temPacote={temPacote}
         />
       )}
+
+      {historico && <HistoricoPainel h={historico} />}
 
       <div className="mt-4 flex flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-soft">
         <label className="flex flex-col gap-1">
@@ -288,6 +301,32 @@ export function AlunoPerfil({
         {suspenso ? <Play size={16} /> : <Pause size={16} />}
         {suspenso ? "Reativar aluno" : "Suspender aluno"}
       </button>
+    </div>
+  );
+}
+
+// ── Mini-histórico (registros_aula como ativo, §5): frequência do mês e
+//    últimas faltas, lendo dados que já são buscados. Só mensalidade/por_aula. ──
+function HistoricoPainel({ h }: { h: HistoricoVM }) {
+  return (
+    <div className="mt-4 rounded-[14px] bg-surface p-4 shadow-soft">
+      <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+        Em {h.nomeMes}
+      </p>
+      <p className="mt-1 text-text">
+        <span className="font-money text-2xl font-semibold">{h.realizadas}</span>{" "}
+        {h.realizadas === 1 ? "aula" : "aulas"}
+        {h.faltas > 0 && ` · ${h.faltas} ${h.faltas === 1 ? "falta" : "faltas"}`}
+        {h.extras > 0 && ` · ${h.extras} ${h.extras === 1 ? "extra" : "extras"}`}
+      </p>
+      {h.ultimasFaltas.length > 0 && (
+        <p className="mt-1 text-sm text-text-muted">
+          Últimas faltas: {h.ultimasFaltas.join(", ")}
+        </p>
+      )}
+      {h.desde && (
+        <p className="mt-0.5 text-sm text-text-muted">Treina desde {h.desde}</p>
+      )}
     </div>
   );
 }

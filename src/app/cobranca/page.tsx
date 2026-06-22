@@ -181,6 +181,7 @@ export default async function CobrancaPage({
         mesRef={mesRef}
         nomeMesAtual={nomeMes(month)}
         somenteLeitura={!ehMesAtual}
+        ehPassado={mesRef < mesAtual}
         template={prof?.template_mensagem ?? null}
         chavePix={prof?.chave_pix ?? null}
         nomeProfessor={prof?.nome ?? null}

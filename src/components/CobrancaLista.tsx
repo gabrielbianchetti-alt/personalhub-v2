@@ -64,6 +64,7 @@ export function CobrancaLista({
   mesRef,
   nomeMesAtual,
   somenteLeitura = false,
+  ehPassado = false,
   template,
   chavePix,
   nomeProfessor,
@@ -72,6 +73,7 @@ export function CobrancaLista({
   mesRef: string;
   nomeMesAtual: string;
   somenteLeitura?: boolean;
+  ehPassado?: boolean;
   template: string | null;
   chavePix: string | null;
   nomeProfessor: string | null;
@@ -281,7 +283,7 @@ export function CobrancaLista({
         <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
-              Previsto no mês
+              {ehPassado ? `Faturado em ${nomeMesAtual}` : "Previsto no mês"}
             </p>
             <p className="font-money text-[26px] font-semibold leading-tight text-text">
               {formatBRL(resumo.totalPrevisto)}

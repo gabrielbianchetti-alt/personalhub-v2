@@ -1,7 +1,8 @@
 // Template de cobrança + link wa.me (§4.3 — sem API oficial na v2.0).
 
 export const TEMPLATE_PADRAO =
-  "Oi {nome}! Fechando {mes}: {aulas} no total — {valor}. " +
+  "Oi {nome}! Fechando {mes}: {aulas} no total — {valor}.\n\n" +
+  "Dias de aula: {dias}\n\n" +
   "Qualquer coisa me chama. Obrigado! 💪";
 
 // Venda de pacote (alunos por créditos). Fixo na v2.0; configurável depois.
@@ -26,13 +27,20 @@ export interface DadosMensagem {
 
 export function renderMensagem(template: string | null, dados: DadosMensagem): string {
   const t = template?.trim() ? template : TEMPLATE_PADRAO;
-  return t
-    .replaceAll("{nome}", primeiroNome(dados.nome))
-    .replaceAll("{valor}", dados.valor)
-    .replaceAll("{mes}", dados.mes)
-    .replaceAll("{aulas}", dados.aulas)
-    .replaceAll("{pix}", dados.pix ?? "")
-    .replaceAll("{dias}", dados.dias ?? "");
+  return (
+    t
+      .replaceAll("{nome}", primeiroNome(dados.nome))
+      .replaceAll("{valor}", dados.valor)
+      .replaceAll("{mes}", dados.mes)
+      .replaceAll("{aulas}", dados.aulas)
+      .replaceAll("{pix}", dados.pix ?? "")
+      .replaceAll("{dias}", dados.dias ?? "")
+      // Placeholder vazio (ex.: aluno sem dias fixos) deixa "Rótulo:" pendurado —
+      // remove a linha-rótulo sem valor e colapsa as quebras que sobraram.
+      .replace(/^[^\n]*:[ \t]*$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 }
 
 export function primeiroNome(nome: string): string {
