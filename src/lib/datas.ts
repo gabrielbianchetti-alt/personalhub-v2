@@ -146,9 +146,9 @@ export function formatBRL(valor: number): string {
   }).format(valor);
 }
 
-/** "2, 4, 9 e 11" — lista legível de dias do mês (placeholder {dias}). */
-export function listaDias(dias: number[]): string {
-  if (dias.length === 0) return "";
-  if (dias.length === 1) return String(dias[0]);
-  return `${dias.slice(0, -1).join(", ")} e ${dias[dias.length - 1]}`;
+/** "02/06, 04/06 e 09/06" — lista legível de datas (placeholder {dias}). */
+export function listaDatas(datas: string[]): string {
+  if (datas.length === 0) return "";
+  if (datas.length === 1) return datas[0];
+  return `${datas.slice(0, -1).join(", ")} e ${datas[datas.length - 1]}`;
 }

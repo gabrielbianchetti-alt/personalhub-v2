@@ -32,8 +32,8 @@ export interface CobrancaItemVM {
   ajusteMotivo: string | null;
   /** só por_aula — legenda "R$ X/aula" sob o valor-herói */
   valorAula: number | null;
-  /** dias do MÊS de referência em que cai a agenda do aluno (placeholder {dias}) */
-  diasAula: number[];
+  /** datas de aula do mês ("dd/mm") em que cai a agenda do aluno (placeholder {dias}) */
+  diasAula: string[];
   /** quando a cobrança foi mandada — alimenta o follow-up de esquecidas */
   enviadoEm: string | null;
   /** só créditos */
@@ -94,7 +94,9 @@ export function montaItemFechamento(
     ajuste,
     ajusteMotivo: fechamento?.ajuste_motivo ?? null,
     valorAula: modo === "por_aula" ? Number(aluno.valor_mensal ?? 0) : null,
-    diasAula: ocorrenciasNoMes(aluno.dias_semana, year, month0),
+    diasAula: ocorrenciasNoMes(aluno.dias_semana, year, month0).map(
+      (d) => `${String(d).padStart(2, "0")}/${String(month0 + 1).padStart(2, "0")}`,
+    ),
     enviadoEm: fechamento?.enviado_em ?? null,
     saldo: null,
     progresso: null,

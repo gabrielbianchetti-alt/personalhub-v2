@@ -10,7 +10,7 @@ import {
   montaItemCreditos,
   resumoMes,
 } from "../src/lib/cobranca.ts";
-import { listaDias } from "../src/lib/datas.ts";
+import { listaDatas } from "../src/lib/datas.ts";
 import type { Fechamento } from "../src/lib/tipos.ts";
 
 const ALUNO_BASE = {
@@ -157,8 +157,13 @@ test("diasAula = dias de aula no mês de referência (ter+qui jun/2026)", () => 
     2026,
     5,
   );
-  assert.deepEqual(item.diasAula, [2, 4, 9, 11, 16, 18, 23, 25, 30]);
-  assert.equal(listaDias(item.diasAula), "2, 4, 9, 11, 16, 18, 23, 25 e 30");
+  assert.deepEqual(item.diasAula, [
+    "02/06", "04/06", "09/06", "11/06", "16/06", "18/06", "23/06", "25/06", "30/06",
+  ]);
+  assert.equal(
+    listaDatas(item.diasAula),
+    "02/06, 04/06, 09/06, 11/06, 16/06, 18/06, 23/06, 25/06 e 30/06",
+  );
 });
 
 test("resumoMes.totalRecebido soma só os fechamentos pagos", () => {
