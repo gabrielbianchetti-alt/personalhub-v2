@@ -38,6 +38,12 @@ export function CheckinList({
   const [alunos, setAlunos] = useState<AlunoHojeVM[]>(initial);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Anúncio pro leitor de tela: o check-in (a tese do app) precisava confirmar
+  // SUCESSO, não só erro. Repetir a mesma msg acrescenta um caractere invisível
+  // pra forçar o reanúncio (aria-live só dispara se o texto muda).
+  const [anuncio, setAnuncio] = useState("");
+  const anunciar = (msg: string) =>
+    setAnuncio((prev) => (prev.replace(/​+$/, "") === msg ? `${msg}​` : msg));
   const [, startTransition] = useTransition();
 
   const esperadosIds = initial.filter((a) => !a.avulso).map((a) => a.id);
@@ -63,6 +69,7 @@ export function CheckinList({
     const flip = (v: boolean) =>
       setAlunos((prev) => prev.map((a) => (a.id === id ? { ...a, faltou: v } : a)));
     flip(marcar);
+    anunciar(marcar ? `Falta de ${atual.nome} marcada` : `${atual.nome} de volta`);
     persistir(
       () => (marcar ? marcarFalta(id, hojeIso) : desmarcarFalta(id, hojeIso)),
       () => flip(!marcar),
@@ -73,6 +80,9 @@ export function CheckinList({
     vibra();
     setSheetOpen(false);
     const existente = alunos.find((a) => a.id === rosterId);
+    anunciar(
+      `Aula extra de ${existente?.nome ?? roster.find((x) => x.id === rosterId)?.nome ?? "aluno"}`,
+    );
     const desfazer = () =>
       setAlunos((prev) =>
         existente
@@ -103,6 +113,7 @@ export function CheckinList({
     if (!atual) return;
     vibra();
     setAlunos((prev) => prev.filter((a) => a.pacoteRegistroId !== registroId));
+    anunciar(`Aula de pacote de ${atual.nome} cancelada`);
     persistir(
       () => cancelarAulaPacote(registroId, alunoId),
       () => setAlunos((prev) => [...prev, atual]),
@@ -118,6 +129,7 @@ export function CheckinList({
         ? prev.filter((a) => a.id !== id)
         : prev.map((a) => (a.id === id ? { ...a, extras: a.extras - 1 } : a)),
     );
+    anunciar(`Aula extra de ${atual.nome} removida`);
     persistir(
       () => removerExtra(id, hojeIso),
       () =>
@@ -138,6 +150,11 @@ export function CheckinList({
 
   return (
     <>
+      {/* Anúncio invisível de sucesso pro leitor de tela (VoiceOver/TalkBack). */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {anuncio}
+      </p>
+
       {pendencias.length > 0 && <Pendencias pendencias={pendencias} />}
 
       {erro && (

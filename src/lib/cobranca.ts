@@ -145,6 +145,51 @@ export interface ResumoMesVM {
   pagos: number;
 }
 
+export interface SnapshotFechamento {
+  professor_id: string;
+  aluno_id: string;
+  mes_referencia: string;
+  aulas_esperadas: number;
+  faltas: number;
+  extras: number;
+  ajuste_manual: number;
+  ajuste_motivo: string | null;
+  valor_final: number;
+}
+
+/**
+ * Monta o snapshot do fechamento (caminho do dinheiro) — PURO e testável.
+ * A action só busca os dados e chama isto; a conta vem da fonte única (aulas).
+ * `faltas` no snapshot soma falta + desmarcada (ambas descontam realizadas).
+ */
+export function montaSnapshotFechamento(args: {
+  professorId: string;
+  alunoId: string;
+  mesRef: string;
+  year: number;
+  month0: number;
+  diasSemana: number[];
+  valorMensal: number | null;
+  modo: "mensalidade" | "por_aula";
+  registros: Pick<RegistroAula, "tipo" | "quantidade">[];
+  ajuste: number;
+  motivo: string | null;
+}): SnapshotFechamento {
+  const excecoes = agregaExcecoes(args.registros);
+  const contagem = contagemMes(args.diasSemana, args.year, args.month0, excecoes, args.ajuste);
+  return {
+    professor_id: args.professorId,
+    aluno_id: args.alunoId,
+    mes_referencia: args.mesRef,
+    aulas_esperadas: contagem.esperadas,
+    faltas: excecoes.faltas + excecoes.desmarcadas,
+    extras: excecoes.extras,
+    ajuste_manual: args.ajuste,
+    ajuste_motivo: args.motivo,
+    valor_final: valorFechamento(args.modo, args.valorMensal, contagem.realizadas),
+  };
+}
+
 export function resumoMes(itens: CobrancaItemVM[]): ResumoMesVM {
   // Créditos fica fora do total: a receita dele é a venda de pacote.
   const fecham = itens.filter((i) => i.modo !== "creditos");

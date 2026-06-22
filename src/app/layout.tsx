@@ -10,7 +10,7 @@ const schibsted = Schibsted_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
 });
-// …sans funcional no corpo (os números R$ usam a fonte do sistema = SF Pro).
+// …sans funcional no corpo (os números R$ usam Geist Mono via .font-money).
 const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],

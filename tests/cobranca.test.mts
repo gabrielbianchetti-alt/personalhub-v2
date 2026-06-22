@@ -8,6 +8,7 @@ import { valorPorAula, valorFechamento } from "../src/lib/aulas.ts";
 import {
   montaItemFechamento,
   montaItemCreditos,
+  montaSnapshotFechamento,
   resumoMes,
 } from "../src/lib/cobranca.ts";
 import { listaDatas } from "../src/lib/datas.ts";
@@ -120,6 +121,47 @@ test("fechamento congelado (enviado/pago) ignora registros novos", () => {
   );
   assert.equal(item.valor, 720); // snapshot manda
   assert.equal(item.status, "enviado");
+});
+
+test("montaSnapshotFechamento congela esperadas/faltas/extras/valor (mensalidade)", () => {
+  const snap = montaSnapshotFechamento({
+    professorId: "p1",
+    alunoId: "a1",
+    mesRef: "2026-06-01",
+    year: 2026,
+    month0: 5,
+    diasSemana: [1, 4], // seg+qui = 9 ocorrências
+    valorMensal: 300,
+    modo: "mensalidade",
+    registros: [
+      { tipo: "falta", quantidade: 1 },
+      { tipo: "desmarcada", quantidade: 1 },
+      { tipo: "extra", quantidade: 2 },
+    ],
+    ajuste: 0,
+    motivo: null,
+  });
+  assert.equal(snap.aulas_esperadas, 9);
+  assert.equal(snap.faltas, 2); // falta + desmarcada
+  assert.equal(snap.extras, 2);
+  assert.equal(snap.valor_final, 300); // mensalidade ignora a contagem
+});
+
+test("montaSnapshotFechamento por_aula = realizadas × valor da aula", () => {
+  const snap = montaSnapshotFechamento({
+    professorId: "p1",
+    alunoId: "a1",
+    mesRef: "2026-06-01",
+    year: 2026,
+    month0: 5,
+    diasSemana: [1, 4],
+    valorMensal: 80,
+    modo: "por_aula",
+    registros: [{ tipo: "falta", quantidade: 1 }],
+    ajuste: 0,
+    motivo: null,
+  });
+  assert.equal(snap.valor_final, 640); // (9 − 1) × 80
 });
 
 test("resumoMes soma mensalidade + por_aula e deixa créditos de fora", () => {

@@ -207,6 +207,11 @@ select:focus-visible,
   .tab-indicador {
     transition: none;
   }
+  /* Sem movimento: a entrada de card e a celebração aparecem sem animar. */
+  .card-in,
+  .celebra {
+    animation: none;
+  }
 }
 
 /* ── Camadas de ambiente ─────────────────────────────────────────────

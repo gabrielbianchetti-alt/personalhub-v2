@@ -6,7 +6,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buscaRegistros } from "@/lib/supabase/registros";
-import { agregaExcecoes, contagemMes, valorFechamento } from "@/lib/aulas";
+import { montaSnapshotFechamento } from "@/lib/cobranca";
 import { diasNoMes, isoDe, parteIso } from "@/lib/datas";
 
 const MES_RE = /^\d{4}-\d{2}-01$/;
@@ -49,22 +49,20 @@ async function snapshotMensalidade(
 
   const ajuste = ajusteOverride?.ajuste ?? fechamentoRes.data?.ajuste_manual ?? 0;
   const motivo = ajusteOverride?.motivo ?? fechamentoRes.data?.ajuste_motivo ?? null;
-  const excecoes = agregaExcecoes(registros);
-  const contagem = contagemMes(alunoRes.data.dias_semana, year, month, excecoes, ajuste);
-  const modo =
-    alunoRes.data.modo_cobranca === "por_aula" ? "por_aula" : "mensalidade";
 
-  return {
-    professor_id: professorId,
-    aluno_id: alunoId,
-    mes_referencia: mesRef,
-    aulas_esperadas: contagem.esperadas,
-    faltas: excecoes.faltas + excecoes.desmarcadas,
-    extras: excecoes.extras,
-    ajuste_manual: ajuste,
-    ajuste_motivo: motivo,
-    valor_final: valorFechamento(modo, alunoRes.data.valor_mensal, contagem.realizadas),
-  };
+  return montaSnapshotFechamento({
+    professorId,
+    alunoId,
+    mesRef,
+    year,
+    month0: month,
+    diasSemana: alunoRes.data.dias_semana,
+    valorMensal: alunoRes.data.valor_mensal,
+    modo: alunoRes.data.modo_cobranca === "por_aula" ? "por_aula" : "mensalidade",
+    registros,
+    ajuste,
+    motivo,
+  });
 }
 
 function validaMes(mesRef: string) {
@@ -96,24 +94,28 @@ export async function salvarAjuste(
 export async function marcarEnviado(alunoId: string, mesRef: string) {
   validaMes(mesRef);
   const ctx = await professorAtual();
-  // Não rebaixar um fechamento já PAGO (concorrência: 2 aparelhos no mesmo mês,
-  // um com a tela velha marcaria "enviado" por cima do "pago").
-  const { data: atual } = await ctx.supabase
+  const snap = await snapshotMensalidade(ctx, alunoId, mesRef);
+  const enviadoEm = new Date().toISOString();
+
+  // Atômico contra concorrência (2 aparelhos no mesmo mês): UPDATE só onde o
+  // status NÃO é pago — nunca rebaixa um pago. Sem WHERE de status só na app.
+  const { data: atualizados, error: updErr } = await ctx.supabase
     .from("fechamentos")
-    .select("status")
+    .update({ ...snap, status: "enviado", enviado_em: enviadoEm })
     .eq("aluno_id", alunoId)
     .eq("mes_referencia", mesRef)
-    .maybeSingle();
-  if (atual?.status === "pago") {
-    revalidatePath("/cobranca");
-    return;
+    .neq("status", "pago")
+    .select("id");
+  if (updErr) throw new Error(updErr.message);
+
+  // Nenhuma linha tocada = ou não existe (aberto sem row) → insere; ou já está
+  // paga → o 23505 do insert preserva o pago (não rebaixa).
+  if (!atualizados || atualizados.length === 0) {
+    const { error: insErr } = await ctx.supabase
+      .from("fechamentos")
+      .insert({ ...snap, status: "enviado", enviado_em: enviadoEm });
+    if (insErr && insErr.code !== "23505") throw new Error(insErr.message);
   }
-  const snap = await snapshotMensalidade(ctx, alunoId, mesRef);
-  const { error } = await ctx.supabase.from("fechamentos").upsert(
-    { ...snap, status: "enviado", enviado_em: new Date().toISOString() },
-    { onConflict: "aluno_id,mes_referencia" },
-  );
-  if (error) throw new Error(error.message);
   revalidatePath("/cobranca");
 }
 
