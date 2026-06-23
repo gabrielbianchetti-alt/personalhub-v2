@@ -493,6 +493,7 @@ function MarcarAulaPacoteSheet({
           </span>
           <input
             type="time"
+            step={300}
             value={hora}
             onChange={(e) => setHora(e.target.value)}
             className="rounded-xl bg-surface px-2.5 py-2.5 text-sm text-text shadow-soft outline-none"

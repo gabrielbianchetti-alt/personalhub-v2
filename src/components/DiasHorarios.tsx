@@ -100,6 +100,7 @@ export function DiasHorarios({
                   <span className="text-sm capitalize text-text-muted">{NOME[d]}</span>
                   <input
                     type="time"
+                    step={300}
                     value={value[String(d)] ?? ""}
                     onChange={(e) => setHora(d, e.target.value)}
                     aria-label={`Horário de ${NOME[d]}`}
