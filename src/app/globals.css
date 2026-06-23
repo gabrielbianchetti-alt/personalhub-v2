@@ -70,11 +70,12 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* Dinheiro: mono tabular (Geist Mono) — a assinatura nº1 da marca (§6.3),
-   "tique de fintech que nenhum template usa". Zero limpo, sem o ponto do IBM
-   Plex Mono. tabular-nums mantém as colunas de valores alinhadas. */
+/* Dinheiro: a MESMA fonte do corpo (IBM Plex Sans) com tabular-nums — os
+   números ficam coerentes com o resto do app (o "0" não destoa) e ainda
+   alinhados em coluna na lista de valores. (Tentamos mono — Plex Mono tinha
+   zero pontilhado, Geist Mono destoava do 0 do sans; consistência venceu.) */
 .font-money {
-  font-family: var(--font-money), ui-monospace, "SF Mono", "Cascadia Mono", monospace;
+  font-family: var(--font-sans), -apple-system, system-ui, sans-serif;
   font-variant-numeric: tabular-nums lining-nums;
   font-weight: 600;
   letter-spacing: -0.01em;

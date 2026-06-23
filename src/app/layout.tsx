@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
+import { IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { SwipeCarrossel } from "@/components/SwipeCarrossel";
@@ -10,18 +10,12 @@ const schibsted = Schibsted_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
 });
-// …sans funcional no corpo (os números R$ usam Geist Mono via .font-money).
+// …sans funcional no corpo. Os números R$ usam ESTE mesmo sans (tabular) via
+// .font-money — coerência com o resto (o "0" não destoa).
 const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
-});
-// Dinheiro: mono tabular com zero LIMPO (sem o ponto do IBM Plex Mono) —
-// reacende o "tique de fintech" da marca (§6.3) sem o glifo estranho.
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  variable: "--font-money",
 });
 
 export const metadata: Metadata = {
@@ -58,7 +52,7 @@ export default function RootLayout({
     // suppressHydrationWarning: o script de tema muda data-theme antes do React.
     <html
       lang="pt-BR"
-      className={`${schibsted.variable} ${plexSans.variable} ${geistMono.variable}`}
+      className={`${schibsted.variable} ${plexSans.variable}`}
       suppressHydrationWarning
     >
       <head>
