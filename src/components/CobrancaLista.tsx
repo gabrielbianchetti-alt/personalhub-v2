@@ -587,7 +587,7 @@ function CobrarSheet({
   // valor no banco dele. Não duplica se o template já usa {pix}.
   const mensagem =
     chavePix && !corpo.includes(chavePix)
-      ? `${corpo}\n\nChave Pix (é só copiar e pôr o valor no seu banco):\n${chavePix}`
+      ? `${corpo}\n\nChave Pix:\n${chavePix}`
       : corpo;
 
   const titulo = `${lembrete ? "Lembrar" : "Cobrar"} ${primeiroNome(item.nome)}${
