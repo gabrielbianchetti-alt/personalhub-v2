@@ -194,7 +194,6 @@ export default async function CobrancaPage({
         ehPassado={mesRef < mesAtual}
         template={prof?.template_mensagem ?? null}
         chavePix={prof?.chave_pix ?? null}
-        nomeProfessor={prof?.nome ?? null}
       />
     </div>
   );

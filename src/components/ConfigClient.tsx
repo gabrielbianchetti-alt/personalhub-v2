@@ -100,6 +100,7 @@ export function ConfigClient({
     mes: "junho",
     aulas: "12 aulas · 1 falta · 2 extras",
     dias: "02/06, 04/06, 09/06, 11/06, 16/06, 18/06, 23/06, 25/06 e 30/06",
+    pix: chavePix || "sua-chave-pix",
   });
 
   return (

@@ -1,8 +1,8 @@
 "use client";
 
 // Cobrança (§4.3): valor como hero, resumo legível, cobrar em ≤3 toques.
-// Extras: Pix copia e cola, follow-up de enviadas sem resposta e o
-// "Fechar o mês" guiado (encadeia os sheets aluno a aluno).
+// Extras: chave Pix em texto na mensagem, follow-up de enviadas sem resposta e
+// o "Fechar o mês" guiado (encadeia os sheets aluno a aluno).
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,6 @@ import Link from "next/link";
 import {
   Check,
   ChevronRight,
-  Copy,
   Download,
   ImageIcon,
   Minus,
@@ -24,7 +23,6 @@ import { formatBRL, listaDatas } from "@/lib/datas";
 import { vibra } from "@/lib/haptico";
 import { ProgressRing } from "./ProgressRing";
 import { Portal } from "./Portal";
-import { pixCopiaECola } from "@/lib/pix";
 import {
   buscaReciboFile,
   compartilharImagem,
@@ -67,7 +65,6 @@ export function CobrancaLista({
   ehPassado = false,
   template,
   chavePix,
-  nomeProfessor,
 }: {
   itens: CobrancaItemVM[];
   mesRef: string;
@@ -76,7 +73,6 @@ export function CobrancaLista({
   ehPassado?: boolean;
   template: string | null;
   chavePix: string | null;
-  nomeProfessor: string | null;
 }) {
   const router = useRouter();
   const [lista, setLista] = useState(itens);
@@ -502,7 +498,6 @@ export function CobrancaLista({
           nomeMesAtual={nomeMesAtual}
           template={template}
           chavePix={chavePix}
-          nomeProfessor={nomeProfessor}
           progresso={guia ? { atual: guia.total - guia.fila.length + 1, total: guia.total } : null}
           onEnviar={aoEnviar}
           onPular={guia ? () => avancar(sheetItem.alunoId) : null}
@@ -547,13 +542,12 @@ export function CobrancaLista({
 }
 
 // ── Cobrar: preview da mensagem + telefone inline na 1ª vez (§4.2).
-//    Quando já enviada vira lembrete; com chave Pix anexa o copia e cola. ──
+//    Quando já enviada vira lembrete; com chave Pix, anexa a chave em texto. ──
 function CobrarSheet({
   item,
   nomeMesAtual,
   template,
   chavePix,
-  nomeProfessor,
   progresso,
   onEnviar,
   onPular,
@@ -565,7 +559,6 @@ function CobrarSheet({
   nomeMesAtual: string;
   template: string | null;
   chavePix: string | null;
-  nomeProfessor: string | null;
   progresso: { atual: number; total: number } | null;
   onEnviar: (item: CobrancaItemVM, link: string) => void;
   onPular: (() => void) | null;
@@ -574,7 +567,6 @@ function CobrarSheet({
   onClose: () => void;
 }) {
   const [tel, setTel] = useState("");
-  const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -589,11 +581,13 @@ function CobrarSheet({
     pix: chavePix ?? "",
     dias: listaDatas(item.diasAula),
   });
-  const pix =
-    chavePix && item.valor > 0
-      ? pixCopiaECola({ chave: chavePix, nome: nomeProfessor ?? "", valor: item.valor })
-      : null;
-  const mensagem = pix ? `${corpo}\n\nPix copia e cola:\n${pix}` : corpo;
+  // Chave Pix em TEXTO (não o "copia e cola" gerado — ele não colava na área
+  // Pix dos bancos). O aluno seleciona/copia a chave na mensagem e coloca o
+  // valor no banco dele. Não duplica se o template já usa {pix}.
+  const mensagem =
+    chavePix && !corpo.includes(chavePix)
+      ? `${corpo}\n\nChave Pix (é só copiar e pôr o valor no seu banco):\n${chavePix}`
+      : corpo;
 
   const titulo = `${lembrete ? "Lembrar" : "Cobrar"} ${primeiroNome(item.nome)}${
     progresso ? ` · ${progresso.atual}/${progresso.total}` : ""
@@ -668,30 +662,14 @@ function CobrarSheet({
           >
             Abrir WhatsApp
           </button>
-          <div className="mt-2 flex gap-2">
-            {pix && (
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard?.writeText(pix);
-                  setCopiado(true);
-                  setTimeout(() => setCopiado(false), 1600);
-                }}
-                className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-surface py-2.5 text-sm font-medium text-text-muted shadow-soft active:opacity-80"
-              >
-                <Copy size={14} />
-                {copiado ? "Copiado ✓" : "Copiar Pix"}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onRecibo}
-              className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-surface py-2.5 text-sm font-medium text-text-muted shadow-soft active:opacity-80"
-            >
-              <ImageIcon size={14} />
-              Recibo em imagem
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onRecibo}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-surface py-2.5 text-sm font-medium text-text-muted shadow-soft active:opacity-80"
+          >
+            <ImageIcon size={14} />
+            Recibo em imagem
+          </button>
           {onPular && (
             <button
               type="button"
