@@ -10,12 +10,6 @@ export const TEMPLATE_PACOTE =
   "Oi {nome}! Bora renovar: pacote de {qtd} aulas por {valor}. " +
   "Confirmando, já deixo agendado. 💪";
 
-// Follow-up de cobrança enviada e ainda não paga — o lembrete educado
-// que tira do professor o desconforto de cobrar de novo.
-export const TEMPLATE_LEMBRETE =
-  "Oi {nome}! Passando só pra confirmar o fechamento de {mes} ({valor}). " +
-  "Qualquer coisa me fala 👍";
-
 export interface DadosMensagem {
   nome: string;
   valor: string; // já formatado em BRL

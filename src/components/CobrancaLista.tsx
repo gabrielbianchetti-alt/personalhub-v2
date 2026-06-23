@@ -30,7 +30,6 @@ import {
 } from "@/lib/compartilhar";
 import {
   renderMensagem,
-  TEMPLATE_LEMBRETE,
   TEMPLATE_PACOTE,
   primeiroNome,
   telefoneWa,
@@ -573,7 +572,9 @@ function CobrarSheet({
   const telefoneOk = telefoneWa(item.telefone);
   const lembrete = item.status === "enviado";
 
-  const corpo = renderMensagem(lembrete ? TEMPLATE_LEMBRETE : template, {
+  // Lembrete usa o MESMO modelo configurado (o que aparece no "Como vai chegar"
+  // do Config) — o que você vê é o que é enviado, sem template-fantasma.
+  const corpo = renderMensagem(template, {
     nome: item.nome,
     valor: formatBRL(item.valor),
     mes: nomeMesAtual,
