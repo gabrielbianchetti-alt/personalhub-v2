@@ -18,7 +18,7 @@ import { ProgressRing } from "@/components/ProgressRing";
 import { Sheet } from "@/components/Sheet";
 import { dataCurta, horarioCurto } from "@/lib/datas";
 import type { ProgressoPacote } from "@/lib/aulas";
-import type { ModoCobranca, AlunoStatus } from "@/lib/tipos";
+import type { ModoCobranca, AlunoStatus, TurmaDia } from "@/lib/tipos";
 
 export interface AulaPacoteVM {
   id: string;
@@ -39,9 +39,12 @@ interface AlunoDados {
   id: string;
   nome: string;
   valor_mensal: number | null;
+  valor_dupla: number | null;
+  valor_trio: number | null;
   modo_cobranca: ModoCobranca;
   dias_semana: number[];
   horarios: Record<string, string> | null;
+  turmas: Record<string, TurmaDia> | null;
   horario: string | null;
   telefone: string | null;
   status: AlunoStatus;
@@ -78,8 +81,11 @@ export function AlunoPerfil({
   const [campos, setCampos] = useState<CamposAluno>({
     nome: aluno.nome,
     valor: String(aluno.valor_mensal ?? "").replace(".", ","),
+    valorDupla: aluno.valor_dupla != null ? String(aluno.valor_dupla).replace(".", ",") : "",
+    valorTrio: aluno.valor_trio != null ? String(aluno.valor_trio).replace(".", ",") : "",
     modo: aluno.modo_cobranca,
     horarios: horariosIniciais(aluno),
+    turmas: aluno.turmas ?? {},
     telefone: aluno.telefone ?? "",
     observacoes: aluno.detalhes?.observacoes ?? "",
     dataInicio: aluno.detalhes?.data_inicio ?? "",
@@ -224,7 +230,35 @@ export function AlunoPerfil({
             <DiasHorarios
               value={campos.horarios}
               onChange={(horarios) => muda({ horarios })}
+              turmas={campos.modo === "por_aula" ? campos.turmas : undefined}
+              onTurmasChange={
+                campos.modo === "por_aula" ? (turmas) => muda({ turmas }) : undefined
+              }
             />
+            {campos.modo === "por_aula" && Object.keys(campos.turmas).length > 0 && (
+              <div className="mt-2 flex gap-2">
+                <div className="flex flex-1 items-center gap-1 rounded-xl bg-surface-soft px-3 py-2">
+                  <span className="text-xs text-text-muted">R$ dupla</span>
+                  <input
+                    value={campos.valorDupla}
+                    onChange={(e) => muda({ valorDupla: e.target.value })}
+                    placeholder="50"
+                    inputMode="decimal"
+                    className="w-full min-w-0 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
+                  />
+                </div>
+                <div className="flex flex-1 items-center gap-1 rounded-xl bg-surface-soft px-3 py-2">
+                  <span className="text-xs text-text-muted">R$ trio</span>
+                  <input
+                    value={campos.valorTrio}
+                    onChange={(e) => muda({ valorTrio: e.target.value })}
+                    placeholder="40"
+                    inputMode="decimal"
+                    className="w-full min-w-0 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
 

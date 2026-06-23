@@ -46,7 +46,9 @@ export default async function CobrancaPage({
   const [alunosRes, registros, fechamentosRes, profRes] = await Promise.all([
     supabase
       .from("alunos")
-      .select("id, nome, telefone, valor_mensal, modo_cobranca, dias_semana")
+      .select(
+        "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas",
+      )
       .eq("status", "ativo")
       .order("nome"),
     mesRef > mesAtual
@@ -151,7 +153,9 @@ export default async function CobrancaPage({
   if (suspensosIds.length > 0) {
     const { data: susp } = await supabase
       .from("alunos")
-      .select("id, nome, telefone, valor_mensal, modo_cobranca, dias_semana")
+      .select(
+        "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas",
+      )
       .in("id", suspensosIds);
     const itensSuspensos = (susp ?? [])
       .filter((a) => a.modo_cobranca !== "creditos")

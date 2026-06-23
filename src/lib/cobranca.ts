@@ -8,15 +8,56 @@ import {
   ocorrenciasNoMes,
   resumoContagem,
   valorFechamento,
+  valorPorAulaDetalhado,
   type ExcecoesMes,
   type ProgressoPacote,
+  type ValorDetalhado,
 } from "./aulas.ts";
 import type {
   Aluno,
   Fechamento,
   FechamentoStatus,
   RegistroAula,
+  TurmaDia,
 } from "./tipos.ts";
+
+// Campos do aluno que definem o preço por dia (dupla/trio) no por_aula.
+interface CamposTurma {
+  dias_semana: number[];
+  turmas: Record<string, TurmaDia>;
+  valor_mensal: number | null; // = valor SOLO da aula no por_aula
+  valor_dupla: number | null;
+  valor_trio: number | null;
+}
+
+// Valor/contagem do por_aula a partir dos registros DATADOS (falta no preço do
+// seu dia; extra no seu valor). Usado pelo VM (aberto) e pelo snapshot.
+function detalhadoPorAula(
+  c: CamposTurma,
+  registros: Pick<RegistroAula, "tipo" | "quantidade" | "data" | "valor">[],
+  year: number,
+  month0: number,
+  ajuste: number,
+): ValorDetalhado {
+  const faltasIso = registros
+    .filter((r) => r.tipo === "falta" || r.tipo === "desmarcada")
+    .map((r) => r.data);
+  const extras = registros
+    .filter((r) => r.tipo === "extra")
+    .map((r) => ({ valor: r.valor, quantidade: r.quantidade }));
+  return valorPorAulaDetalhado({
+    diasSemana: c.dias_semana,
+    turmas: c.turmas ?? {},
+    valorSolo: c.valor_mensal,
+    valorDupla: c.valor_dupla,
+    valorTrio: c.valor_trio,
+    year,
+    month0,
+    faltasIso,
+    extras,
+    ajuste,
+  });
+}
 
 export interface CobrancaItemVM {
   alunoId: string;
@@ -48,9 +89,17 @@ export interface CobrancaItemVM {
 export function montaItemFechamento(
   aluno: Pick<
     Aluno,
-    "id" | "nome" | "telefone" | "valor_mensal" | "dias_semana" | "modo_cobranca"
+    | "id"
+    | "nome"
+    | "telefone"
+    | "valor_mensal"
+    | "valor_dupla"
+    | "valor_trio"
+    | "dias_semana"
+    | "turmas"
+    | "modo_cobranca"
   >,
-  registrosDoMes: Pick<RegistroAula, "tipo" | "quantidade">[],
+  registrosDoMes: Pick<RegistroAula, "tipo" | "quantidade" | "data" | "valor">[],
   fechamento: Fechamento | null,
   year: number,
   month0: number,
@@ -65,8 +114,18 @@ export function montaItemFechamento(
   if (status === "aberto") {
     // Derivado ao vivo: correções de hoje entram na hora.
     excecoes = agregaExcecoes(registrosDoMes);
-    contagem = contagemMes(aluno.dias_semana, year, month0, excecoes, ajuste);
-    valor = valorFechamento(modo, aluno.valor_mensal, contagem.realizadas);
+    if (modo === "por_aula") {
+      // Preço por dia (dupla/trio) — soma data-a-data.
+      const det = detalhadoPorAula(aluno, registrosDoMes, year, month0, ajuste);
+      contagem = {
+        esperadas: ocorrenciasNoMes(aluno.dias_semana, year, month0).length,
+        realizadas: det.realizadas,
+      };
+      valor = det.valor;
+    } else {
+      contagem = contagemMes(aluno.dias_semana, year, month0, excecoes, ajuste);
+      valor = valorFechamento("mensalidade", aluno.valor_mensal, contagem.realizadas);
+    }
   } else {
     // Congelado no envio: o que foi cobrado não muda sozinho depois.
     excecoes = {
@@ -169,24 +228,43 @@ export function montaSnapshotFechamento(args: {
   year: number;
   month0: number;
   diasSemana: number[];
-  valorMensal: number | null;
+  turmas: Record<string, TurmaDia>;
+  valorMensal: number | null; // = valor SOLO no por_aula
+  valorDupla: number | null;
+  valorTrio: number | null;
   modo: "mensalidade" | "por_aula";
-  registros: Pick<RegistroAula, "tipo" | "quantidade">[];
+  registros: Pick<RegistroAula, "tipo" | "quantidade" | "data" | "valor">[];
   ajuste: number;
   motivo: string | null;
 }): SnapshotFechamento {
   const excecoes = agregaExcecoes(args.registros);
-  const contagem = contagemMes(args.diasSemana, args.year, args.month0, excecoes, args.ajuste);
+  const esperadas = ocorrenciasNoMes(args.diasSemana, args.year, args.month0).length;
+  const valorFinal =
+    args.modo === "por_aula"
+      ? detalhadoPorAula(
+          {
+            dias_semana: args.diasSemana,
+            turmas: args.turmas,
+            valor_mensal: args.valorMensal,
+            valor_dupla: args.valorDupla,
+            valor_trio: args.valorTrio,
+          },
+          args.registros,
+          args.year,
+          args.month0,
+          args.ajuste,
+        ).valor
+      : valorFechamento("mensalidade", args.valorMensal, 0);
   return {
     professor_id: args.professorId,
     aluno_id: args.alunoId,
     mes_referencia: args.mesRef,
-    aulas_esperadas: contagem.esperadas,
+    aulas_esperadas: esperadas,
     faltas: excecoes.faltas + excecoes.desmarcadas,
     extras: excecoes.extras,
     ajuste_manual: args.ajuste,
     ajuste_motivo: args.motivo,
-    valor_final: valorFechamento(args.modo, args.valorMensal, contagem.realizadas),
+    valor_final: valorFinal,
   };
 }
 

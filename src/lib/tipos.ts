@@ -14,14 +14,25 @@ export type RegistroTipo = "falta" | "extra" | "desmarcada" | "aula";
 export type RegistroOrigem = "checkin" | "retroativo" | "ajuste";
 export type FechamentoStatus = "aberto" | "enviado" | "pago";
 
+// Turma de um dia: dupla/trio com o nome do parceiro (pode não ser aluno).
+// Dia ausente do mapa = solo.
+export type TipoTurma = "dupla" | "trio";
+export interface TurmaDia {
+  tipo: TipoTurma;
+  nome?: string;
+}
+
 export interface Aluno {
   id: string;
   professor_id: string;
   nome: string;
-  valor_mensal: number | null;
+  valor_mensal: number | null; // por_aula: este é o valor SOLO da aula
+  valor_dupla: number | null; // por_aula: R$/aula nos dias de dupla
+  valor_trio: number | null; // por_aula: R$/aula nos dias de trio
   modo_cobranca: ModoCobranca;
   dias_semana: number[]; // 0=dom … 6=sáb (convenção getDay)
   horarios: Record<string, string>; // diaSemana(0..6) -> "HH:MM" (por dia)
+  turmas: Record<string, TurmaDia>; // diaSemana(0..6) -> dupla/trio (ausente = solo)
   horario: string | null; // legado/fallback (um time só) — migração 0007
   telefone: string | null;
   status: AlunoStatus;
@@ -37,6 +48,7 @@ export interface RegistroAula {
   tipo: RegistroTipo;
   origem: RegistroOrigem;
   quantidade: number;
+  valor: number | null; // extra: valor cobrado naquela aula (null = valor solo)
   horario: string | null; // hora da aula de pacote agendada ("HH:MM:SS")
   created_at: string;
 }

@@ -39,7 +39,9 @@ export async function GET(
   const [alunoRes, registros, fechamentoRes, profRes] = await Promise.all([
     supabase
       .from("alunos")
-      .select("id, nome, telefone, valor_mensal, dias_semana, modo_cobranca")
+      .select(
+        "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, dias_semana, turmas, modo_cobranca",
+      )
       .eq("id", alunoId)
       .maybeSingle(),
     buscaRegistros(supabase, { alunoId, de: mes, ate: fimMes }),

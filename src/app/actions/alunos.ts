@@ -4,24 +4,42 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ModoCobranca } from "@/lib/tipos";
+import type { ModoCobranca, TurmaDia } from "@/lib/tipos";
 
 export interface LinhaLote {
   nome: string;
   valor: string; // "300" ou "300,00" — parse aqui (no pacote = valor do pacote)
+  valorDupla: string; // só por_aula: R$/aula nos dias de dupla (opcional)
+  valorTrio: string; // só por_aula: R$/aula nos dias de trio (opcional)
   modo: ModoCobranca;
   horarios: Record<string, string>; // diaSemana(0..6) -> "HH:MM" (não usado no pacote)
+  turmas: Record<string, TurmaDia>; // diaSemana -> dupla/trio + nome (ausente = solo)
   qtd: string; // só pacote: quantidade de aulas do pacote
 }
 
 export interface CamposAluno {
   nome: string;
   valor: string;
+  valorDupla: string;
+  valorTrio: string;
   modo: ModoCobranca;
   horarios: Record<string, string>;
+  turmas: Record<string, TurmaDia>;
   telefone: string;
   observacoes: string;
   dataInicio: string; // "YYYY-MM-DD" ou ""
+}
+
+// Só dias 0..6, tipo dupla/trio, nome aparado. Solo = ausência (não guarda).
+function sanitizaTurmas(turmas: Record<string, TurmaDia>): Record<string, TurmaDia> {
+  const limpo: Record<string, TurmaDia> = {};
+  for (const [k, v] of Object.entries(turmas ?? {})) {
+    const d = Number(k);
+    if (!Number.isInteger(d) || d < 0 || d > 6) continue;
+    if (v?.tipo !== "dupla" && v?.tipo !== "trio") continue;
+    limpo[String(d)] = { tipo: v.tipo, ...(v.nome?.trim() ? { nome: v.nome.trim() } : {}) };
+  }
+  return limpo;
 }
 
 function parseValorBR(v: string): number | null {
@@ -65,16 +83,22 @@ export async function criarAlunosEmLote(linhas: LinhaLote[]) {
     const valor = parseValorBR(l.valor);
     if (valor === null)
       throw new Error(`Valor inválido para ${l.nome.trim()}.`);
-    // Pacote não tem agenda fixa — dias/horários vazios.
+    // Pacote não tem agenda fixa — dias/horários/turmas vazios.
     const { dias, horarios } =
       l.modo === "creditos" ? { dias: [], horarios: {} } : sanitizaHorarios(l.horarios);
+    // Dupla/trio só faz preço no por_aula (mensalidade é valor fechado; lá a
+    // turma é só rótulo, mas guardamos igual pro contexto aparecer).
+    const turmas = l.modo === "creditos" ? {} : sanitizaTurmas(l.turmas);
     return {
       professor_id: professorId,
       nome: l.nome.trim(),
       valor_mensal: valor,
+      valor_dupla: l.modo === "por_aula" ? parseValorBR(l.valorDupla) : null,
+      valor_trio: l.modo === "por_aula" ? parseValorBR(l.valorTrio) : null,
       modo_cobranca: l.modo,
       dias_semana: dias,
       horarios,
+      turmas,
       status: "ativo" as const,
     };
   });
@@ -126,14 +150,18 @@ export async function atualizarAluno(id: string, campos: CamposAluno) {
   if (valor === null) throw new Error("Valor inválido.");
 
   const { dias, horarios } = sanitizaHorarios(campos.horarios);
+  const turmas = campos.modo === "creditos" ? {} : sanitizaTurmas(campos.turmas);
   const { error } = await supabase
     .from("alunos")
     .update({
       nome: campos.nome.trim(),
       valor_mensal: valor,
+      valor_dupla: campos.modo === "por_aula" ? parseValorBR(campos.valorDupla) : null,
+      valor_trio: campos.modo === "por_aula" ? parseValorBR(campos.valorTrio) : null,
       modo_cobranca: campos.modo,
       dias_semana: dias,
       horarios,
+      turmas,
       telefone: campos.telefone.trim() || null,
       detalhes: {
         ...(campos.observacoes.trim() ? { observacoes: campos.observacoes.trim() } : {}),

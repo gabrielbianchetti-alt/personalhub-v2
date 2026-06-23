@@ -11,7 +11,16 @@ import { criarAlunosEmLote, type LinhaLote } from "@/app/actions/alunos";
 import { DiasHorarios } from "@/components/DiasHorarios";
 
 function linhaVazia(): LinhaLote {
-  return { nome: "", valor: "", modo: "mensalidade", horarios: {}, qtd: "" };
+  return {
+    nome: "",
+    valor: "",
+    valorDupla: "",
+    valorTrio: "",
+    modo: "mensalidade",
+    horarios: {},
+    turmas: {},
+    qtd: "",
+  };
 }
 
 export default function NovoAlunosPage() {
@@ -145,7 +154,36 @@ export default function NovoAlunosPage() {
                 <DiasHorarios
                   value={l.horarios}
                   onChange={(horarios) => muda(i, { horarios })}
+                  turmas={l.modo === "por_aula" ? l.turmas : undefined}
+                  onTurmasChange={
+                    l.modo === "por_aula" ? (turmas) => muda(i, { turmas }) : undefined
+                  }
                 />
+                {l.modo === "por_aula" &&
+                  (Object.keys(l.turmas).length > 0) && (
+                    <div className="mt-2 flex gap-2">
+                      <div className="flex flex-1 items-center gap-1 rounded-xl bg-surface-soft px-3 py-2">
+                        <span className="text-xs text-text-muted">R$ dupla</span>
+                        <input
+                          value={l.valorDupla}
+                          onChange={(e) => muda(i, { valorDupla: e.target.value })}
+                          placeholder="50"
+                          inputMode="decimal"
+                          className="w-full min-w-0 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
+                        />
+                      </div>
+                      <div className="flex flex-1 items-center gap-1 rounded-xl bg-surface-soft px-3 py-2">
+                        <span className="text-xs text-text-muted">R$ trio</span>
+                        <input
+                          value={l.valorTrio}
+                          onChange={(e) => muda(i, { valorTrio: e.target.value })}
+                          placeholder="40"
+                          inputMode="decimal"
+                          className="w-full min-w-0 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
+                        />
+                      </div>
+                    </div>
+                  )}
               </div>
             )}
           </div>

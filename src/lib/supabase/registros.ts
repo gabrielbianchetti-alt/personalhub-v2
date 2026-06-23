@@ -10,6 +10,7 @@ export interface RegistroLeve {
   data: string;
   tipo: RegistroTipo;
   quantidade: number;
+  valor: number | null; // extra: valor cobrado (null = valor solo) — migração 0012
 }
 
 export async function buscaRegistros(
@@ -25,14 +26,22 @@ export async function buscaRegistros(
     return q;
   };
 
-  const completo = await monta("aluno_id, data, tipo, quantidade");
+  // Tenta o completo (com valor, pós-0012); cai pra sem-valor (pós-0004) e
+  // pra sem-quantidade (pré-0004) — o app não quebra entre deploy e migração.
+  const completo = await monta("aluno_id, data, tipo, quantidade, valor");
   if (!completo.error) return (completo.data ?? []) as unknown as RegistroLeve[];
+
+  const semValor = await monta("aluno_id, data, tipo, quantidade");
+  if (!semValor.error)
+    return ((semValor.data ?? []) as unknown as Omit<RegistroLeve, "valor">[]).map(
+      (r) => ({ ...r, valor: null }),
+    );
 
   const reduzido = await monta("aluno_id, data, tipo");
   if (reduzido.error) throw new Error(reduzido.error.message);
-  return ((reduzido.data ?? []) as unknown as Omit<RegistroLeve, "quantidade">[]).map(
-    (r) => ({ ...r, quantidade: 1 }),
-  );
+  return (
+    (reduzido.data ?? []) as unknown as Omit<RegistroLeve, "quantidade" | "valor">[]
+  ).map((r) => ({ ...r, quantidade: 1, valor: null }));
 }
 
 // Aulas marcadas de PACOTE (tipo 'aula'), com hora e id (p/ cancelar).

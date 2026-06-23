@@ -16,6 +16,8 @@ import {
   agregaExcecoes,
   resumoContagem,
   saldoCreditos,
+  precoDoDia,
+  valorPorAulaDetalhado,
 } from "../src/lib/aulas.ts";
 import {
   addDias,
@@ -298,4 +300,80 @@ test("waLink codifica a mensagem", () => {
   assert.ok(link.startsWith("https://wa.me/5511987654321?text="));
   assert.ok(!link.includes(" "));
   assert.ok(decodeURIComponent(link.split("text=")[1]).includes("R$ 300,00"));
+});
+
+// ── Aula em dupla/trio: preço por dia (por_aula) ────────────────────────────
+// Junho/2026 (month0=5): seg = 1,8,15,22,29 (5×) · qua = 3,10,17,24 (4×).
+
+test("precoDoDia: solo, dupla, trio e fallback no solo", () => {
+  assert.equal(precoDoDia(undefined, 80, 50, 40), 80); // sem turma = solo
+  assert.equal(precoDoDia({ tipo: "dupla" }, 80, 50, 40), 50);
+  assert.equal(precoDoDia({ tipo: "trio" }, 80, 50, 40), 40);
+  assert.equal(precoDoDia({ tipo: "dupla" }, 80, null, null), 80); // sem valor = solo
+});
+
+test("valorPorAulaDetalhado: sem turmas = realizadas × solo (generalização)", () => {
+  const r = valorPorAulaDetalhado({
+    diasSemana: [1], // seg, 5× em junho
+    turmas: {},
+    valorSolo: 80,
+    valorDupla: null,
+    valorTrio: null,
+    year: 2026,
+    month0: 5,
+    faltasIso: [],
+    extras: [],
+  });
+  assert.equal(r.realizadas, 5);
+  assert.equal(r.valor, 400);
+});
+
+test("valorPorAulaDetalhado: seg solo (80) + qua dupla (50)", () => {
+  const r = valorPorAulaDetalhado({
+    diasSemana: [1, 3],
+    turmas: { "3": { tipo: "dupla", nome: "Carlos" } },
+    valorSolo: 80,
+    valorDupla: 50,
+    valorTrio: null,
+    year: 2026,
+    month0: 5,
+    faltasIso: [],
+    extras: [],
+  });
+  assert.equal(r.realizadas, 9); // 5 seg + 4 qua
+  assert.equal(r.valor, 5 * 80 + 4 * 50); // 400 + 200 = 600
+});
+
+test("valorPorAulaDetalhado: falta numa qua-dupla desconta o preço DAQUELE dia", () => {
+  const r = valorPorAulaDetalhado({
+    diasSemana: [1, 3],
+    turmas: { "3": { tipo: "dupla" } },
+    valorSolo: 80,
+    valorDupla: 50,
+    valorTrio: null,
+    year: 2026,
+    month0: 5,
+    faltasIso: ["2026-06-10"], // uma quarta
+    extras: [],
+  });
+  assert.equal(r.realizadas, 8);
+  assert.equal(r.valor, 600 - 50); // tira 50 (preço da dupla), não 80
+});
+
+test("valorPorAulaDetalhado: extra com valor próprio + ajuste no solo", () => {
+  const r = valorPorAulaDetalhado({
+    diasSemana: [1],
+    turmas: {},
+    valorSolo: 80,
+    valorDupla: 50,
+    valorTrio: null,
+    year: 2026,
+    month0: 5,
+    faltasIso: [],
+    extras: [{ valor: 50 }, { valor: null }], // 1 dupla avulsa + 1 extra solo
+    ajuste: 1,
+  });
+  // 5×80 (seg) + 50 (extra dupla) + 80 (extra solo) + 1×80 (ajuste) = 400+50+80+80
+  assert.equal(r.valor, 610);
+  assert.equal(r.realizadas, 5 + 2 + 1);
 });

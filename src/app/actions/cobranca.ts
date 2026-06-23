@@ -34,7 +34,7 @@ async function snapshotMensalidade(
   const [alunoRes, registros, fechamentoRes] = await Promise.all([
     supabase
       .from("alunos")
-      .select("dias_semana, valor_mensal, modo_cobranca")
+      .select("dias_semana, turmas, valor_mensal, valor_dupla, valor_trio, modo_cobranca")
       .eq("id", alunoId)
       .single(),
     buscaRegistros(supabase, { alunoId, de: mesRef, ate: fimMes }),
@@ -57,7 +57,10 @@ async function snapshotMensalidade(
     year,
     month0: month,
     diasSemana: alunoRes.data.dias_semana,
+    turmas: alunoRes.data.turmas ?? {},
     valorMensal: alunoRes.data.valor_mensal,
+    valorDupla: alunoRes.data.valor_dupla ?? null,
+    valorTrio: alunoRes.data.valor_trio ?? null,
     modo: alunoRes.data.modo_cobranca === "por_aula" ? "por_aula" : "mensalidade",
     registros,
     ajuste,

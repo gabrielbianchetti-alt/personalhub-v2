@@ -19,7 +19,10 @@ const ALUNO_BASE = {
   nome: "Marina Lopes",
   telefone: null,
   valor_mensal: 80,
+  valor_dupla: null,
+  valor_trio: null,
   dias_semana: [1, 4], // seg + qui
+  turmas: {},
 };
 
 function fechamentoCongelado(patch: Partial<Fechamento>): Fechamento {
@@ -63,7 +66,7 @@ test("por_aula aberto: falta desconta, extra soma, ajuste mexe no total", () => 
 
   const comFalta = montaItemFechamento(
     aluno,
-    [{ tipo: "falta", quantidade: 1 }],
+    [{ tipo: "falta", quantidade: 1, data: "2026-06-01", valor: null }], // 1ª seg
     null,
     2026,
     5,
@@ -74,7 +77,7 @@ test("por_aula aberto: falta desconta, extra soma, ajuste mexe no total", () => 
 
   const comExtra = montaItemFechamento(
     aluno,
-    [{ tipo: "extra", quantidade: 2 }],
+    [{ tipo: "extra", quantidade: 2, data: "2026-06-03", valor: null }],
     null,
     2026,
     5,
@@ -100,7 +103,10 @@ test("mensalidade aberto: valor fixo independe de faltas/extras", () => {
   };
   const comFalta = montaItemFechamento(
     aluno,
-    [{ tipo: "falta", quantidade: 2 }],
+    [
+      { tipo: "falta", quantidade: 1, data: "2026-06-01", valor: null },
+      { tipo: "falta", quantidade: 1, data: "2026-06-04", valor: null },
+    ],
     null,
     2026,
     5,
@@ -114,7 +120,7 @@ test("fechamento congelado (enviado/pago) ignora registros novos", () => {
   const aluno = { ...ALUNO_BASE, modo_cobranca: "por_aula" as const };
   const item = montaItemFechamento(
     aluno,
-    [{ tipo: "falta", quantidade: 5 }], // chegaram DEPOIS do envio
+    [{ tipo: "falta", quantidade: 5, data: "2026-06-01", valor: null }], // chegaram DEPOIS do envio
     fechamentoCongelado({ valor_final: 720, aulas_esperadas: 9 }),
     2026,
     5,
@@ -131,12 +137,15 @@ test("montaSnapshotFechamento congela esperadas/faltas/extras/valor (mensalidade
     year: 2026,
     month0: 5,
     diasSemana: [1, 4], // seg+qui = 9 ocorrências
+    turmas: {},
     valorMensal: 300,
+    valorDupla: null,
+    valorTrio: null,
     modo: "mensalidade",
     registros: [
-      { tipo: "falta", quantidade: 1 },
-      { tipo: "desmarcada", quantidade: 1 },
-      { tipo: "extra", quantidade: 2 },
+      { tipo: "falta", quantidade: 1, data: "2026-06-01", valor: null },
+      { tipo: "desmarcada", quantidade: 1, data: "2026-06-04", valor: null },
+      { tipo: "extra", quantidade: 2, data: "2026-06-03", valor: null },
     ],
     ajuste: 0,
     motivo: null,
@@ -147,21 +156,26 @@ test("montaSnapshotFechamento congela esperadas/faltas/extras/valor (mensalidade
   assert.equal(snap.valor_final, 300); // mensalidade ignora a contagem
 });
 
-test("montaSnapshotFechamento por_aula = realizadas × valor da aula", () => {
+test("montaSnapshotFechamento por_aula com dupla: falta no preço do dia", () => {
   const snap = montaSnapshotFechamento({
     professorId: "p1",
     alunoId: "a1",
     mesRef: "2026-06-01",
     year: 2026,
     month0: 5,
-    diasSemana: [1, 4],
+    diasSemana: [1, 4], // seg solo + qui dupla
+    turmas: { "4": { tipo: "dupla", nome: "Carlos" } },
     valorMensal: 80,
+    valorDupla: 50,
+    valorTrio: null,
     modo: "por_aula",
-    registros: [{ tipo: "falta", quantidade: 1 }],
+    // falta numa quinta (dupla) → tira 50, não 80
+    registros: [{ tipo: "falta", quantidade: 1, data: "2026-06-04", valor: null }],
     ajuste: 0,
     motivo: null,
   });
-  assert.equal(snap.valor_final, 640); // (9 − 1) × 80
+  // seg (5×80=400) + qui (4×50=200) − 1 falta de qui (50) = 550
+  assert.equal(snap.valor_final, 550);
 });
 
 test("resumoMes soma mensalidade + por_aula e deixa créditos de fora", () => {

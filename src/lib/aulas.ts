@@ -14,8 +14,8 @@
 
 // Import com extensão explícita: o Node roda os testes direto nos .ts
 // (type stripping nativo) e exige o caminho completo.
-import { diasNoMes, dowDe } from "./datas.ts";
-import type { RegistroAula } from "./tipos.ts";
+import { diasNoMes, dowDe, isoDe } from "./datas.ts";
+import type { RegistroAula, TurmaDia } from "./tipos.ts";
 
 /** Dias do mês (1..N) em que caem os dias_semana do aluno. */
 export function ocorrenciasNoMes(
@@ -97,6 +97,63 @@ export function valorMensalidade(valorMensal: number | null): number {
  */
 export function valorPorAula(valorAula: number | null, realizadas: number): number {
   return Math.max(0, realizadas) * Number(valorAula ?? 0);
+}
+
+/** Preço de uma aula conforme o tipo da turma daquele dia (fallback no solo). */
+export function precoDoDia(
+  turma: TurmaDia | undefined,
+  valorSolo: number,
+  valorDupla: number | null,
+  valorTrio: number | null,
+): number {
+  if (turma?.tipo === "dupla") return Number(valorDupla ?? valorSolo);
+  if (turma?.tipo === "trio") return Number(valorTrio ?? valorSolo);
+  return valorSolo;
+}
+
+export interface ValorDetalhado {
+  valor: number;
+  realizadas: number;
+}
+
+/**
+ * por_aula com preço POR DIA (dupla/trio). Soma o preço de cada aula que
+ * aconteceu: ocorrências do mês − faltas (cada falta no preço do SEU dia, via
+ * data) + extras (cada uma no seu valor; null = solo) + ajuste manual (em nº de
+ * aulas, no valor solo). Sem turmas e sem valor nas extras, dá o mesmo que
+ * `realizadas × valor` (é uma generalização do valorPorAula).
+ */
+export function valorPorAulaDetalhado(args: {
+  diasSemana: number[];
+  turmas: Record<string, TurmaDia>;
+  valorSolo: number | null;
+  valorDupla: number | null;
+  valorTrio: number | null;
+  year: number;
+  month0: number;
+  faltasIso: string[]; // datas de falta + desmarcada (YYYY-MM-DD)
+  extras: { valor: number | null; quantidade?: number }[];
+  ajuste?: number;
+}): ValorDetalhado {
+  const solo = Number(args.valorSolo ?? 0);
+  const faltou = new Set(args.faltasIso);
+  let valor = 0;
+  let realizadas = 0;
+  for (const dia of ocorrenciasNoMes(args.diasSemana, args.year, args.month0)) {
+    if (faltou.has(isoDe(args.year, args.month0, dia))) continue; // não aconteceu
+    const turma = args.turmas[String(dowDe(args.year, args.month0, dia))];
+    valor += precoDoDia(turma, solo, args.valorDupla, args.valorTrio);
+    realizadas += 1;
+  }
+  for (const e of args.extras) {
+    const q = e.quantidade ?? 1;
+    valor += Number(e.valor ?? solo) * q;
+    realizadas += q;
+  }
+  const ajuste = args.ajuste ?? 0;
+  valor += ajuste * solo;
+  realizadas += ajuste;
+  return { valor: Math.max(0, valor), realizadas: Math.max(0, realizadas) };
 }
 
 /** Total do fechamento conforme o modo (créditos não fecha mês — vende pacote). */
