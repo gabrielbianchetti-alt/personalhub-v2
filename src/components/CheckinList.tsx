@@ -11,6 +11,7 @@ import {
   removerExtra,
 } from "@/app/actions/registros";
 import { cancelarAulaPacote } from "@/app/actions/pacote";
+import type { Resultado } from "@/lib/resultado";
 import { CheckinCard } from "./CheckinCard";
 import { ExtraSheet } from "./ExtraSheet";
 import { Pendencias } from "./Pendencias";
@@ -49,14 +50,20 @@ export function CheckinList({
   const esperadosIds = initial.filter((a) => !a.avulso).map((a) => a.id);
 
   // Otimista: aplica na hora, persiste por trás; se falhar, desfaz e avisa.
-  function persistir(acao: () => Promise<void>, desfazer: () => void) {
+  // A action devolve {ok:false, erro} para erro esperado (mensagem pt-BR chega
+  // até em produção); o catch cobre só falha de rede/inesperada.
+  function persistir(acao: () => Promise<Resultado>, desfazer: () => void) {
     setErro(null);
     startTransition(async () => {
       try {
-        await acao();
-      } catch (e) {
+        const r = await acao();
+        if (!r.ok) {
+          desfazer();
+          setErro(r.erro);
+        }
+      } catch {
         desfazer();
-        setErro(e instanceof Error ? e.message : "Não salvou — tente de novo.");
+        setErro("Não salvou — tente de novo.");
       }
     });
   }

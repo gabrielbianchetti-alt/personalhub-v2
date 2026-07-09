@@ -1,7 +1,8 @@
 "use client";
 
-// Navegação de meses na Cobrança: ‹ mês › pra ver prévia de passados/futuros.
-// "Hoje" volta pro mês corrente. Mês ≠ corrente mostra etiqueta "prévia".
+// Navegação de meses na Cobrança. "Hoje" volta pro mês corrente.
+// Passado é COBRÁVEL (mês encerrado — o caso clássico de cobrar dia 1-5);
+// só o futuro é etiquetado "prévia" (projeção, sem ações).
 
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -11,10 +12,12 @@ export function MesNavegador({
   mesRef,
   rotulo,
   ehMesAtual,
+  ehPassado,
 }: {
   mesRef: string;
   rotulo: string;
   ehMesAtual: boolean;
+  ehPassado: boolean;
 }) {
   const router = useRouter();
   const ir = (delta: number) =>
@@ -42,7 +45,7 @@ export function MesNavegador({
         </span>
         {!ehMesAtual && (
           <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-accent">
-            prévia
+            {ehPassado ? "encerrado" : "prévia"}
           </span>
         )}
       </button>

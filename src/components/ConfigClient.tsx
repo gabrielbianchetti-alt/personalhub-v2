@@ -180,8 +180,8 @@ export function ConfigClient({
             className="rounded-xl bg-surface-soft px-3 py-2.5 text-[15px] text-text outline-none placeholder:text-text-muted"
           />
           <span className="text-xs text-text-muted">
-            Com a chave salva, a cobrança já vai com o Pix copia e cola no valor
-            exato do fechamento.
+            Com a chave salva, ela vai junto na mensagem — o aluno copia e paga
+            no valor do fechamento.
           </span>
         </label>
 
@@ -211,10 +211,14 @@ export function ConfigClient({
             setErro(null);
             startTransition(async () => {
               try {
-                await salvarConta(nome, template, chavePix);
+                const r = await salvarConta(nome, template, chavePix);
+                if (!r.ok) {
+                  setErro(r.erro);
+                  return;
+                }
                 setSalvo(true);
-              } catch (e) {
-                setErro(e instanceof Error ? e.message : "Não salvou.");
+              } catch {
+                setErro("Não salvou.");
               }
             });
           }}

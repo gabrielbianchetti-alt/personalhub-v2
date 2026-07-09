@@ -31,16 +31,6 @@ export function ocorrenciasNoMes(
   return dias;
 }
 
-/** Ocorrências até um dia-limite inclusivo (créditos: aulas já decorridas). */
-export function ocorrenciasAteDia(
-  diasSemana: number[],
-  year: number,
-  month0: number,
-  ateDia: number,
-): number[] {
-  return ocorrenciasNoMes(diasSemana, year, month0).filter((d) => d <= ateDia);
-}
-
 export interface ExcecoesMes {
   faltas: number;
   extras: number;
@@ -201,43 +191,7 @@ export function progressoPacote(
   return { qtd, usadas, agendadas, restantes: Math.max(0, qtd - usadas - agendadas) };
 }
 
-/**
- * Saldo de créditos derivado — sem job de débito diário.
- * Conta as aulas realizadas (presumidas + extras − faltas − desmarcadas)
- * desde o dia seguinte à compra do pacote mais recente até hoje, e subtrai
- * do total comprado. Determinístico e sempre em dia com correções retroativas.
- */
-export function saldoCreditos(args: {
-  qtdCompradas: number;
-  diasSemana: number[];
-  compraIso: string; // data do pacote mais recente
-  hojeIso: string;
-  registros: Pick<RegistroAula, "tipo" | "quantidade" | "data">[]; // do período
-}): number {
-  const { qtdCompradas, diasSemana, compraIso, hojeIso, registros } = args;
-  let presumidas = 0;
-  // Percorre mês a mês do dia seguinte à compra até hoje. (Dia+1 pode
-  // "estourar" o mês — inofensivo: o filtro só pega ocorrências reais.)
-  const [y, m, d] = compraIso.split("-").map(Number);
-  let cursor = { year: y, month: m - 1, day: d + 1 };
-  const [hy, hm, hd] = hojeIso.split("-").map(Number);
-  const fim = { year: hy, month: hm - 1, day: hd };
-  while (
-    cursor.year < fim.year ||
-    (cursor.year === fim.year && cursor.month <= fim.month)
-  ) {
-    const ultimo =
-      cursor.year === fim.year && cursor.month === fim.month
-        ? fim.day
-        : diasNoMes(cursor.year, cursor.month);
-    presumidas += ocorrenciasNoMes(diasSemana, cursor.year, cursor.month).filter(
-      (dia) => dia >= cursor.day && dia <= ultimo,
-    ).length;
-    cursor = { year: cursor.month === 11 ? cursor.year + 1 : cursor.year, month: (cursor.month + 1) % 12, day: 1 };
-  }
-  const e = agregaExcecoes(
-    registros.filter((r) => r.data > compraIso && r.data <= hojeIso),
-  );
-  const realizadas = Math.max(0, presumidas - e.faltas - e.desmarcadas + e.extras);
-  return qtdCompradas - realizadas;
-}
+// saldoCreditos e ocorrenciasAteDia (modelo antigo de "aulas presumidas por
+// agenda fixa") foram REMOVIDAS: o pacote virou "aulas marcadas" e o saldo real
+// vem de progressoPacote + o count em actions/pacote.ts. Eram código morto com
+// testes verdes — armadilha pra quem fosse mexer no saldo.

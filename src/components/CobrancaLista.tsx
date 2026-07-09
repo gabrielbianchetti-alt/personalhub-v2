@@ -43,6 +43,8 @@ import {
   venderPacote,
 } from "@/app/actions/cobranca";
 import { salvarTelefone } from "@/app/actions/alunos";
+import type { Resultado } from "@/lib/resultado";
+import { parseValorBR, valorParaInput } from "@/lib/valores";
 import { Sheet } from "./Sheet";
 
 type SheetState =
@@ -105,14 +107,20 @@ export function CobrancaLista({
       prev.map((i) => (i.alunoId === alunoId ? { ...i, status } : i)),
     );
 
-  function persistir(acao: () => Promise<void>, desfazer?: () => void) {
+  // A action devolve {ok:false, erro} para erro esperado (mensagem pt-BR chega
+  // até em produção); o catch cobre só falha de rede/inesperada.
+  function persistir(acao: () => Promise<Resultado>, desfazer?: () => void) {
     setErro(null);
     startTransition(async () => {
       try {
-        await acao();
-      } catch (e) {
+        const r = await acao();
+        if (!r.ok) {
+          desfazer?.();
+          setErro(r.erro);
+        }
+      } catch {
         desfazer?.();
-        setErro(e instanceof Error ? e.message : "Não salvou — tente de novo.");
+        setErro("Não salvou — tente de novo.");
       }
     });
   }
@@ -533,6 +541,13 @@ export function CobrancaLista({
             setSheet(null);
             router.refresh();
           }}
+          onTelefone={(tel) =>
+            setLista((prev) =>
+              prev.map((i) =>
+                i.alunoId === sheetItem.alunoId ? { ...i, telefone: tel } : i,
+              ),
+            )
+          }
           onClose={fecharSheet}
         />
       )}
@@ -621,10 +636,14 @@ function CobrarSheet({
               }
               startTransition(async () => {
                 try {
-                  await salvarTelefone(item.alunoId, tel);
+                  const r = await salvarTelefone(item.alunoId, tel);
+                  if (!r.ok) {
+                    setErro(r.erro);
+                    return;
+                  }
                   onTelefone(tel);
-                } catch (e) {
-                  setErro(e instanceof Error ? e.message : "Não salvou.");
+                } catch {
+                  setErro("Não salvou.");
                 }
               });
             }}
@@ -845,10 +864,14 @@ function AjusteSheet({
           setErro(null);
           startTransition(async () => {
             try {
-              await salvarAjuste(item.alunoId, mesRef, ajuste, motivo);
+              const r = await salvarAjuste(item.alunoId, mesRef, ajuste, motivo);
+              if (!r.ok) {
+                setErro(r.erro);
+                return;
+              }
               onSalvo();
-            } catch (e) {
-              setErro(e instanceof Error ? e.message : "Não salvou.");
+            } catch {
+              setErro("Não salvou.");
             }
           });
         }}
@@ -864,46 +887,110 @@ function AjusteSheet({
 function PacoteSheet({
   item,
   onVendido,
+  onTelefone,
   onClose,
 }: {
   item: CobrancaItemVM;
   onVendido: (waUrl: string | null) => void;
+  onTelefone: (tel: string) => void;
   onClose: () => void;
 }) {
   const [qtd, setQtd] = useState(item.ultimoPacote?.qtd ?? 10);
-  const [valor, setValor] = useState(
-    item.ultimoPacote ? String(item.ultimoPacote.valor).replace(".", ",") : "",
-  );
+  const [valor, setValor] = useState(valorParaInput(item.ultimoPacote?.valor));
+  const [tel, setTel] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Mesma regra do CobrarSheet (§4.2/§4.3): sem WhatsApp válido, pede inline —
+  // antes o "Vender e cobrar" gravava a venda e NÃO cobrava, em silêncio.
+  const telefoneOk = telefoneWa(item.telefone);
+
+  const salvarTel = () => {
+    setErro(null);
+    if (!telefoneWa(tel)) {
+      setErro("Número incompleto — confere o DDD?");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const r = await salvarTelefone(item.alunoId, tel);
+        if (!r.ok) {
+          setErro(r.erro);
+          return;
+        }
+        onTelefone(tel);
+      } catch {
+        setErro("Não salvou.");
+      }
+    });
+  };
+
   const vender = (abrirWhats: boolean) => {
     setErro(null);
-    const v = Number(valor.replace(/[R$\s.]/g, "").replace(",", "."));
-    if (!Number.isFinite(v) || v <= 0) {
+    const v = parseValorBR(valor);
+    if (v === null || v <= 0) {
       setErro("Valor do pacote inválido.");
       return;
     }
     startTransition(async () => {
       try {
-        await venderPacote(item.alunoId, qtd, v);
-        const tel = telefoneWa(item.telefone);
-        if (abrirWhats && tel) {
+        const r = await venderPacote(item.alunoId, qtd, v);
+        if (!r.ok) {
+          setErro(r.erro);
+          return;
+        }
+        const telWa = telefoneWa(item.telefone);
+        if (abrirWhats && telWa) {
           const msg = renderMensagem(TEMPLATE_PACOTE, {
             nome: item.nome,
             valor: formatBRL(v),
             mes: "",
             aulas: "",
           }).replaceAll("{qtd}", String(qtd));
-          onVendido(waLink(tel, msg));
+          onVendido(waLink(telWa, msg));
         } else {
           onVendido(null);
         }
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : "Não salvou.");
+      } catch {
+        setErro("Não salvou.");
       }
     });
   };
+
+  if (!telefoneOk) {
+    return (
+      <Sheet open title={`Pacote de ${primeiroNome(item.nome)}`} onClose={onClose}>
+        <p className="text-sm text-text-muted">
+          Primeira cobrança — qual o WhatsApp de {primeiroNome(item.nome)}?
+        </p>
+        <input
+          value={tel}
+          onChange={(e) => setTel(e.target.value)}
+          placeholder="(11) 98765-4321"
+          inputMode="tel"
+          autoFocus
+          className="mt-3 w-full rounded-2xl bg-surface px-4 py-3 text-text shadow-soft outline-none placeholder:text-text-muted"
+        />
+        {erro && <p className="mt-2 text-sm text-danger">{erro}</p>}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={salvarTel}
+          className="mt-3 w-full rounded-2xl bg-accent py-3 font-medium text-accent-contrast active:opacity-90 disabled:opacity-60"
+        >
+          {pending ? "Salvando…" : "Salvar e continuar"}
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => vender(false)}
+          className="mt-2 w-full rounded-2xl py-2.5 text-sm font-medium text-text-muted active:bg-surface-soft disabled:opacity-60"
+        >
+          Só registrar a venda (sem cobrar)
+        </button>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet open title={`Pacote de ${primeiroNome(item.nome)}`} onClose={onClose}>

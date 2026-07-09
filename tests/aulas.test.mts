@@ -11,11 +11,10 @@ import assert from "node:assert/strict";
 
 import {
   ocorrenciasNoMes,
-  ocorrenciasAteDia,
   contagemMes,
   agregaExcecoes,
   resumoContagem,
-  saldoCreditos,
+  progressoPacote,
   precoDoDia,
   valorPorAulaDetalhado,
 } from "../src/lib/aulas.ts";
@@ -99,16 +98,39 @@ test("casos literais conferidos à mão", () => {
   );
 });
 
-test("ocorrenciasAteDia é o prefixo correto", () => {
-  for (const [year, month] of MESES) {
-    for (const dias of DIAS_SETS) {
-      for (const ate of [1, 10, 15, 28]) {
-        const motor = ocorrenciasAteDia(dias, year, month, ate);
-        const oraculo = oraculoOcorrencias(dias, year, month).filter((d) => d <= ate);
-        assert.deepEqual(motor, oraculo);
-      }
-    }
-  }
+// ── progressoPacote: o dinheiro do modo créditos (saldo/anel/CTA de renovação) ──
+test("progressoPacote: fronteira hoje (aula de HOJE conta como usada)", () => {
+  const p = progressoPacote(
+    10,
+    [{ data: "2026-06-10" }, { data: "2026-06-14" }, { data: "2026-06-20" }],
+    "2026-06-14",
+  );
+  assert.deepEqual(p, { qtd: 10, usadas: 2, agendadas: 1, restantes: 7 });
+});
+
+test("progressoPacote: sem aulas marcadas, tudo livre", () => {
+  assert.deepEqual(progressoPacote(8, [], "2026-06-14"), {
+    qtd: 8,
+    usadas: 0,
+    agendadas: 0,
+    restantes: 8,
+  });
+});
+
+test("progressoPacote: restantes clampa em 0 quando marcadas > qtd", () => {
+  const aulas = [
+    { data: "2026-06-01" },
+    { data: "2026-06-02" },
+    { data: "2026-06-03" },
+  ];
+  const p = progressoPacote(2, aulas, "2026-06-14");
+  assert.equal(p.usadas, 3);
+  assert.equal(p.restantes, 0);
+});
+
+test("progressoPacote: pacote esgotado só de agendadas", () => {
+  const p = progressoPacote(2, [{ data: "2026-07-01" }, { data: "2026-07-03" }], "2026-06-14");
+  assert.deepEqual(p, { qtd: 2, usadas: 0, agendadas: 2, restantes: 0 });
 });
 
 test("contagemMes: fórmula realizadas = esperadas − faltas − desmarcadas + extras + ajuste (≥0)", () => {
@@ -156,67 +178,6 @@ test("resumoContagem legível", () => {
   assert.equal(
     resumoContagem({ esperadas: 4, realizadas: 1 }, { faltas: 0, extras: 0, desmarcadas: 0 }, -3),
     "1 aula · ajuste -3",
-  );
-});
-
-// ── saldoCreditos: cenários conferidos à mão ────────────────────────
-test("saldoCreditos debita aulas presumidas, faltas e extras", () => {
-  const base = {
-    qtdCompradas: 10,
-    diasSemana: [1, 3, 5], // seg/qua/sex
-    compraIso: "2026-05-31", // domingo
-    hojeIso: "2026-06-14",
-  };
-  // Jun/2026 (começa segunda): 1,3,5,8,10,12 ≤ 14 → 6 presumidas.
-  assert.equal(saldoCreditos({ ...base, registros: [] }), 4);
-  // 1 falta devolve 1 crédito.
-  assert.equal(
-    saldoCreditos({
-      ...base,
-      registros: [{ tipo: "falta", quantidade: 1, data: "2026-06-03" }],
-    }),
-    5,
-  );
-  // 2 extras debitam 2 a mais.
-  assert.equal(
-    saldoCreditos({
-      ...base,
-      registros: [{ tipo: "extra", quantidade: 2, data: "2026-06-06" }],
-    }),
-    2,
-  );
-  // Registro fora do período (antes da compra) é ignorado.
-  assert.equal(
-    saldoCreditos({
-      ...base,
-      registros: [{ tipo: "extra", quantidade: 5, data: "2026-05-20" }],
-    }),
-    4,
-  );
-});
-
-test("saldoCreditos atravessa meses e respeita compra no meio do mês", () => {
-  // Compra qui 2026-05-28; mai 29..31: sex 29 → 1; jun 1..3: seg 1, qua 3 → 2.
-  assert.equal(
-    saldoCreditos({
-      qtdCompradas: 8,
-      diasSemana: [1, 3, 5],
-      compraIso: "2026-05-28",
-      hojeIso: "2026-06-03",
-      registros: [],
-    }),
-    5,
-  );
-  // Compra sex 2026-06-05: conta de 6 em diante → 8, 10, 12 ≤ 14 → 3.
-  assert.equal(
-    saldoCreditos({
-      qtdCompradas: 10,
-      diasSemana: [1, 3, 5],
-      compraIso: "2026-06-05",
-      hojeIso: "2026-06-14",
-      registros: [],
-    }),
-    7,
   );
 });
 

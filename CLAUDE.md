@@ -24,5 +24,9 @@ Regra de negócio em aberto (default §5): em `mensalidade`, falta **não** desc
 - **Fonte única da contagem é `src/lib/aulas.ts`** (Hoje, Cobrança e actions consomem dela; ninguém conta por fora). Testes em `tests/` rodam com `npm test` (Node 24, type stripping nativo — por isso os imports internos da lib usam extensão `.ts`).
 - **Fechamento `aberto` é sempre derivado ao vivo; o snapshot só congela ao virar `enviado`/`pago`** (recomputado no servidor em `actions/cobranca.ts`). Nunca preencher snapshot na criação.
 - **Todo conceito de "hoje" passa por `agoraSP()`** (`src/lib/datas.ts`, fuso América/São_Paulo). `new Date()` cru no servidor é bug (Vercel roda em UTC).
-- **Saldo de créditos é derivado** (`saldoCreditos`): total do pacote mais recente − aulas realizadas desde a compra. Não há job de débito.
+- **Saldo de créditos é derivado** de `progressoPacote` (aulas.ts) + o count em `actions/pacote.ts`: qtd do pacote mais recente − aulas marcadas (tipo 'aula') desde a compra. Não há job de débito. (O antigo `saldoCreditos` por agenda presumida foi removido — pacote é "aulas marcadas".)
+- **Erro esperado de server action é VALOR, não throw**: actions devolvem `Resultado` (`lib/resultado.ts`, `{ok:false, erro}`) — em produção o Next mascara o `message` de throws e o professor via um parágrafo genérico em inglês. Caller checa `r.ok`; `executa()` converte na borda.
+- **Sessão nas actions via `professorAtual()` (`lib/supabase/sessao.ts`)** — getClaims local, sem round-trip ao Auth por toque. Não voltar a chamar `auth.getUser()` em action.
 - Migrações em `supabase/migrations/`, rodadas manualmente no SQL Editor (ordem numérica). `scripts/verify-schema.cjs` valida schema+RLS com uma conta de teste.
+- **Pre-commit (husky) roda `npm run typecheck` + `npm test`** — commit não entra com o caminho do dinheiro quebrado (push na main = deploy). Não pular com `--no-verify`.
+- **`/design-review`** (`.claude/commands/design-review.md`): revisão de UI contra o §6 (identidade CARIMBO, glass, carrossel, a11y) no preview ao vivo — rodar antes de push que toque em tela.

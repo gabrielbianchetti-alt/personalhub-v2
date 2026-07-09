@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { Check, X } from "lucide-react";
 import type { PendenciaVM } from "@/lib/hoje";
 import { confirmarDia, resolverDiaComFaltas } from "@/app/actions/registros";
+import type { Resultado } from "@/lib/resultado";
 import { dataCurta } from "@/lib/datas";
 import { vibra } from "@/lib/haptico";
 
@@ -20,7 +21,7 @@ export function Pendencias({ pendencias }: { pendencias: PendenciaVM[] }) {
   const atual = fila[0];
   if (!atual) return null;
 
-  function resolver(acao: () => Promise<void>) {
+  function resolver(acao: () => Promise<Resultado>) {
     vibra();
     const anterior = fila;
     setFila((f) => f.slice(1));
@@ -29,10 +30,14 @@ export function Pendencias({ pendencias }: { pendencias: PendenciaVM[] }) {
     setErro(null);
     startTransition(async () => {
       try {
-        await acao();
-      } catch (e) {
+        const r = await acao();
+        if (!r.ok) {
+          setFila(anterior);
+          setErro(r.erro);
+        }
+      } catch {
         setFila(anterior);
-        setErro(e instanceof Error ? e.message : "Não salvou — tente de novo.");
+        setErro("Não salvou — tente de novo.");
       }
     });
   }

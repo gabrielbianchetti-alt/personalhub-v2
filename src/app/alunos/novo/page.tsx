@@ -50,10 +50,14 @@ export default function NovoAlunosPage() {
     }
     startTransition(async () => {
       try {
-        await criarAlunosEmLote(preenchidas);
+        const r = await criarAlunosEmLote(preenchidas);
+        if (!r.ok) {
+          setErro(r.erro);
+          return;
+        }
         router.replace("/alunos");
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : "Não salvou — tente de novo.");
+      } catch {
+        setErro("Não salvou — tente de novo.");
       }
     });
   };

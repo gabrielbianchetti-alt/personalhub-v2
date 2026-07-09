@@ -183,6 +183,7 @@ export default async function CobrancaPage({
         mesRef={mesRef}
         rotulo={`${nomeMes(month)}${year !== sp.year ? ` ${year}` : ""}`}
         ehMesAtual={ehMesAtual}
+        ehPassado={mesRef < mesAtual}
       />
 
       <CobrancaLista
@@ -190,7 +191,9 @@ export default async function CobrancaPage({
         itens={itens}
         mesRef={mesRef}
         nomeMesAtual={nomeMes(month)}
-        somenteLeitura={!ehMesAtual}
+        // Mês PASSADO é cobrável (cobrar dia 1-5 o mês que fechou é o caso
+        // clássico; pago dia 2 precisa virar "pago"). Só futuro é prévia.
+        somenteLeitura={mesRef > mesAtual}
         ehPassado={mesRef < mesAtual}
         template={prof?.template_mensagem ?? null}
         chavePix={prof?.chave_pix ?? null}

@@ -17,6 +17,7 @@ import { DiasHorarios } from "@/components/DiasHorarios";
 import { ProgressRing } from "@/components/ProgressRing";
 import { Sheet } from "@/components/Sheet";
 import { dataCurta, horarioCurto } from "@/lib/datas";
+import { valorParaInput } from "@/lib/valores";
 import type { ProgressoPacote } from "@/lib/aulas";
 import type { ModoCobranca, AlunoStatus, TurmaDia } from "@/lib/tipos";
 
@@ -80,9 +81,9 @@ export function AlunoPerfil({
   const ehPacote = aluno.modo_cobranca === "creditos";
   const [campos, setCampos] = useState<CamposAluno>({
     nome: aluno.nome,
-    valor: String(aluno.valor_mensal ?? "").replace(".", ","),
-    valorDupla: aluno.valor_dupla != null ? String(aluno.valor_dupla).replace(".", ",") : "",
-    valorTrio: aluno.valor_trio != null ? String(aluno.valor_trio).replace(".", ",") : "",
+    valor: valorParaInput(aluno.valor_mensal),
+    valorDupla: valorParaInput(aluno.valor_dupla),
+    valorTrio: valorParaInput(aluno.valor_trio),
     modo: aluno.modo_cobranca,
     horarios: horariosIniciais(aluno),
     turmas: aluno.turmas ?? {},
@@ -111,10 +112,14 @@ export function AlunoPerfil({
     startTransition(async () => {
       setErro(null);
       try {
-        await atualizarAluno(aluno.id, campos);
+        const r = await atualizarAluno(aluno.id, campos);
+        if (!r.ok) {
+          setErro(r.erro);
+          return;
+        }
         setSalvo(true);
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : "Não salvou — tente de novo.");
+      } catch {
+        setErro("Não salvou — tente de novo.");
       }
     });
 
@@ -122,13 +127,17 @@ export function AlunoPerfil({
     startTransition(async () => {
       setErro(null);
       try {
-        await mudarStatusAluno(
+        const r = await mudarStatusAluno(
           aluno.id,
           aluno.status === "ativo" ? "suspenso" : "ativo",
         );
+        if (!r.ok) {
+          setErro(r.erro);
+          return;
+        }
         router.refresh();
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : "Não salvou — tente de novo.");
+      } catch {
+        setErro("Não salvou — tente de novo.");
       }
     });
 
@@ -452,12 +461,16 @@ function MarcarAulaPacoteSheet({
     }
     startTransition(async () => {
       try {
-        await agendarAulaPacote(alunoId, data, hora);
+        const r = await agendarAulaPacote(alunoId, data, hora);
+        if (!r.ok) {
+          setErro(r.erro);
+          return;
+        }
         setData("");
         setHora("");
         router.refresh();
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : "Não consegui marcar.");
+      } catch {
+        setErro("Não consegui marcar.");
       }
     });
   };
@@ -466,10 +479,14 @@ function MarcarAulaPacoteSheet({
     startTransition(async () => {
       setErro(null);
       try {
-        await cancelarAulaPacote(id, alunoId);
+        const r = await cancelarAulaPacote(id, alunoId);
+        if (!r.ok) {
+          setErro(r.erro);
+          return;
+        }
         router.refresh();
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : "Não consegui cancelar.");
+      } catch {
+        setErro("Não consegui cancelar.");
       }
     });
 

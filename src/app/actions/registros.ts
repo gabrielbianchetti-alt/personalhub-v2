@@ -2,9 +2,12 @@
 
 // Ações do check-in (Hoje + pendências retroativas).
 // registros_aula guarda SÓ exceções (§2.2) — presença é derivada.
+// Erro esperado volta como {ok:false, erro} (lib/resultado) — em produção o
+// Next mascara throws de action e a mensagem pt-BR não chegava ao professor.
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { professorAtual } from "@/lib/supabase/sessao";
+import { executa, type Resultado } from "@/lib/resultado";
 import { addDias, agoraSP } from "@/lib/datas";
 import type { RegistroOrigem } from "@/lib/tipos";
 
@@ -25,130 +28,149 @@ async function validar(dataIso: string) {
   const hoje = agoraSP().iso;
   if (dataIso > hoje || dataIso < addDias(hoje, -7))
     throw new Error("Fora da janela de correção (7 dias).");
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Sessão expirada — entre de novo.");
-  return { supabase, professorId: user.id };
+  return professorAtual();
 }
 
 export async function marcarFalta(
   alunoId: string,
   dataIso: string,
   origem: RegistroOrigem = "checkin",
-) {
-  const { supabase, professorId } = await validar(dataIso);
-  const { error } = await supabase.from("registros_aula").insert({
-    professor_id: professorId,
-    aluno_id: alunoId,
-    data: dataIso,
-    tipo: "falta",
-    origem,
+): Promise<Resultado> {
+  return executa(async () => {
+    const { supabase, professorId } = await validar(dataIso);
+    const { error } = await supabase.from("registros_aula").insert({
+      professor_id: professorId,
+      aluno_id: alunoId,
+      data: dataIso,
+      tipo: "falta",
+      origem,
+    });
+    // 23505 = já marcada (outro aparelho/toque duplo) — idempotente.
+    if (error && error.code !== "23505") throw new Error(error.message);
+    revalidatePath("/");
   });
-  // 23505 = já marcada (outro aparelho/toque duplo) — idempotente.
-  if (error && error.code !== "23505") throw new Error(error.message);
-  revalidatePath("/");
 }
 
-export async function desmarcarFalta(alunoId: string, dataIso: string) {
-  const { supabase } = await validar(dataIso);
-  const { error } = await supabase
-    .from("registros_aula")
-    .delete()
-    .eq("aluno_id", alunoId)
-    .eq("data", dataIso)
-    .eq("tipo", "falta");
-  if (error) throw new Error(error.message);
-  revalidatePath("/");
+export async function desmarcarFalta(
+  alunoId: string,
+  dataIso: string,
+): Promise<Resultado> {
+  return executa(async () => {
+    const { supabase } = await validar(dataIso);
+    const { error } = await supabase
+      .from("registros_aula")
+      .delete()
+      .eq("aluno_id", alunoId)
+      .eq("data", dataIso)
+      .eq("tipo", "falta");
+    if (error) throw new Error(error.message);
+    revalidatePath("/");
+  });
 }
 
 export async function adicionarExtra(
   alunoId: string,
   dataIso: string,
   origem: RegistroOrigem = "checkin",
-) {
-  const { supabase, professorId } = await validar(dataIso);
-  const { data: existente, error: selErr } = await supabase
-    .from("registros_aula")
-    .select("id, quantidade")
-    .eq("aluno_id", alunoId)
-    .eq("data", dataIso)
-    .eq("tipo", "extra")
-    .maybeSingle();
-  if (selErr) checaMigracao(selErr.message);
-
-  if (existente) {
-    const { error } = await supabase
-      .from("registros_aula")
-      .update({ quantidade: existente.quantidade + 1 })
-      .eq("id", existente.id);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await supabase.from("registros_aula").insert({
+): Promise<Resultado> {
+  return executa(async () => {
+    const { supabase, professorId } = await validar(dataIso);
+    // Insert primeiro: o unique (aluno, data, tipo) resolve a corrida do toque
+    // duplo — o perdedor cai no 23505 e vira incremento (antes estourava erro).
+    const { error: insErr } = await supabase.from("registros_aula").insert({
       professor_id: professorId,
       aluno_id: alunoId,
       data: dataIso,
       tipo: "extra",
       origem,
     });
+    if (!insErr) {
+      revalidatePath("/");
+      return;
+    }
+    if (insErr.code !== "23505") checaMigracao(insErr.message);
+
+    const { data: existente, error: selErr } = await supabase
+      .from("registros_aula")
+      .select("id, quantidade")
+      .eq("aluno_id", alunoId)
+      .eq("data", dataIso)
+      .eq("tipo", "extra")
+      .maybeSingle();
+    if (selErr) checaMigracao(selErr.message);
+    if (!existente) throw new Error("Não salvou — tente de novo.");
+    const { error } = await supabase
+      .from("registros_aula")
+      .update({ quantidade: existente.quantidade + 1 })
+      .eq("id", existente.id);
     if (error) throw new Error(error.message);
-  }
-  revalidatePath("/");
+    revalidatePath("/");
+  });
 }
 
-export async function removerExtra(alunoId: string, dataIso: string) {
-  const { supabase } = await validar(dataIso);
-  const { data: existente, error: selErr } = await supabase
-    .from("registros_aula")
-    .select("id, quantidade")
-    .eq("aluno_id", alunoId)
-    .eq("data", dataIso)
-    .eq("tipo", "extra")
-    .maybeSingle();
-  if (selErr) checaMigracao(selErr.message);
-  if (!existente) return;
+export async function removerExtra(
+  alunoId: string,
+  dataIso: string,
+): Promise<Resultado> {
+  return executa(async () => {
+    const { supabase } = await validar(dataIso);
+    const { data: existente, error: selErr } = await supabase
+      .from("registros_aula")
+      .select("id, quantidade")
+      .eq("aluno_id", alunoId)
+      .eq("data", dataIso)
+      .eq("tipo", "extra")
+      .maybeSingle();
+    if (selErr) checaMigracao(selErr.message);
+    if (!existente) return;
 
-  const { error } =
-    existente.quantidade > 1
-      ? await supabase
-          .from("registros_aula")
-          .update({ quantidade: existente.quantidade - 1 })
-          .eq("id", existente.id)
-      : await supabase.from("registros_aula").delete().eq("id", existente.id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/");
+    const { error } =
+      existente.quantidade > 1
+        ? await supabase
+            .from("registros_aula")
+            .update({ quantidade: existente.quantidade - 1 })
+            .eq("id", existente.id)
+        : await supabase.from("registros_aula").delete().eq("id", existente.id);
+    if (error) throw new Error(error.message);
+    revalidatePath("/");
+  });
 }
 
 /** Confirma um dia pendente ("todos fizeram") — a pergunta não volta. */
-export async function confirmarDia(dataIso: string) {
-  const { supabase, professorId } = await validar(dataIso);
-  const { error } = await supabase
-    .from("dias_resolvidos")
-    .insert({ professor_id: professorId, data: dataIso });
-  if (error && error.code !== "23505") throw new Error(error.message);
-  revalidatePath("/");
+export async function confirmarDia(dataIso: string): Promise<Resultado> {
+  return executa(async () => {
+    const { supabase, professorId } = await validar(dataIso);
+    const { error } = await supabase
+      .from("dias_resolvidos")
+      .insert({ professor_id: professorId, data: dataIso });
+    if (error && error.code !== "23505") throw new Error(error.message);
+    revalidatePath("/");
+  });
 }
 
 /** Resolve um dia pendente corrigindo faltas pontuais (origem retroativo). */
-export async function resolverDiaComFaltas(dataIso: string, alunoIds: string[]) {
-  const { supabase, professorId } = await validar(dataIso);
-  if (alunoIds.length > 0) {
-    const { error } = await supabase.from("registros_aula").insert(
-      alunoIds.map((alunoId) => ({
-        professor_id: professorId,
-        aluno_id: alunoId,
-        data: dataIso,
-        tipo: "falta" as const,
-        origem: "retroativo" as const,
-      })),
-    );
+export async function resolverDiaComFaltas(
+  dataIso: string,
+  alunoIds: string[],
+): Promise<Resultado> {
+  return executa(async () => {
+    const { supabase, professorId } = await validar(dataIso);
+    if (alunoIds.length > 0) {
+      const { error } = await supabase.from("registros_aula").insert(
+        alunoIds.map((alunoId) => ({
+          professor_id: professorId,
+          aluno_id: alunoId,
+          data: dataIso,
+          tipo: "falta" as const,
+          origem: "retroativo" as const,
+        })),
+      );
+      if (error && error.code !== "23505") throw new Error(error.message);
+    }
+    const { error } = await supabase
+      .from("dias_resolvidos")
+      .insert({ professor_id: professorId, data: dataIso });
     if (error && error.code !== "23505") throw new Error(error.message);
-  }
-  const { error } = await supabase
-    .from("dias_resolvidos")
-    .insert({ professor_id: professorId, data: dataIso });
-  if (error && error.code !== "23505") throw new Error(error.message);
-  revalidatePath("/");
+    revalidatePath("/");
+  });
 }
