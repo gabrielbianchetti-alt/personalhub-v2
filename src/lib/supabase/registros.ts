@@ -55,13 +55,14 @@ export interface AulaPacote {
 
 export async function buscaAulasPacote(
   supabase: SupabaseClient,
-  f: { alunoId?: string; de?: string; ate?: string },
+  f: { alunoId?: string; alunoIds?: string[]; de?: string; ate?: string },
 ): Promise<AulaPacote[]> {
   let q = supabase
     .from("registros_aula")
     .select("id, aluno_id, data, horario")
     .eq("tipo", "aula");
   if (f.alunoId) q = q.eq("aluno_id", f.alunoId);
+  if (f.alunoIds) q = q.in("aluno_id", f.alunoIds);
   if (f.de) q = q.gte("data", f.de);
   if (f.ate) q = q.lte("data", f.ate);
   const { data, error } = await q.order("data");

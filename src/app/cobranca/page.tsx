@@ -54,7 +54,12 @@ export default async function CobrancaPage({
     mesRef > mesAtual
       ? Promise.resolve<RegistroLeve[]>([]) // futuro: projeção pura pelos dias fixos
       : buscaRegistros(supabase, { de: mesRef, ate: ateData }),
-    supabase.from("fechamentos").select("*").eq("mes_referencia", mesRef),
+    supabase
+      .from("fechamentos")
+      .select(
+        "id, professor_id, aluno_id, mes_referencia, aulas_esperadas, faltas, extras, ajuste_manual, ajuste_motivo, valor_final, status, enviado_em, pago_em",
+      )
+      .eq("mes_referencia", mesRef),
     supabase
       .from("professores")
       .select("template_mensagem, nome, chave_pix")
@@ -95,28 +100,43 @@ export default async function CobrancaPage({
     }
   }
 
-  // Créditos: 2 queries no total (antes eram 2×N round-trips). 1) o pacote mais
-  // recente de CADA aluno (ordena desc, pega o 1º por aluno em JS); 2) todas as
-  // aulas de pacote desde a compra mais antiga — agrupadas e filtradas por aluno.
+  // 2º batch — TUDO em paralelo (era um waterfall de até 3 awaits seriais):
+  // pacotes e aulas de pacote dependem só de creditoIds; suspensos dependem só
+  // de fechamentos+ativos (1º batch). As aulas vêm sem corte de data — o filtro
+  // "desde a compra" já é aplicado em JS logo abaixo, por aluno.
   const creditoIds = creditoAlunos.map((a) => a.id);
-  const { data: pacotesData } = creditoIds.length
-    ? await supabase
-        .from("pacotes_creditos")
-        .select("aluno_id, qtd_aulas, valor, created_at")
-        .in("aluno_id", creditoIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
+  const ativosIds = new Set(ativos.map((a) => a.id));
+  const suspensosIds = [...fechamentos.keys()].filter((id) => !ativosIds.has(id));
+
+  const [pacotesRes, todasAulas, suspensosRes] = await Promise.all([
+    creditoIds.length
+      ? supabase
+          .from("pacotes_creditos")
+          .select("aluno_id, qtd_aulas, valor, created_at")
+          .in("aluno_id", creditoIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    creditoIds.length
+      ? buscaAulasPacote(supabase, { alunoIds: creditoIds })
+      : Promise.resolve([]),
+    suspensosIds.length
+      ? supabase
+          .from("alunos")
+          .select(
+            "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas",
+          )
+          .in("id", suspensosIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  // Pacote mais recente de cada aluno (ordena desc, 1º por aluno em JS).
   const pacotePorAluno = new Map<
     string,
     { qtd_aulas: number; valor: number; created_at: string }
   >();
-  for (const p of pacotesData ?? [])
+  for (const p of pacotesRes.data ?? [])
     if (!pacotePorAluno.has(p.aluno_id)) pacotePorAluno.set(p.aluno_id, p);
 
-  const compras = [...pacotePorAluno.values()].map((p) => p.created_at.slice(0, 10)).sort();
-  const todasAulas = compras.length
-    ? await buscaAulasPacote(supabase, { de: compras[0] })
-    : [];
   const aulasPorAluno = new Map<string, { data: string }[]>();
   for (const aula of todasAulas) {
     const arr = aulasPorAluno.get(aula.aluno_id) ?? [];
@@ -148,30 +168,20 @@ export default async function CobrancaPage({
 
   // Suspensos que ainda têm fechamento neste mês: não somem da Cobrança nem do
   // "Recebido" — dinheiro já trabalhado/quitado não pode evaporar ao suspender.
-  const ativosIds = new Set(ativos.map((a) => a.id));
-  const suspensosIds = [...fechamentos.keys()].filter((id) => !ativosIds.has(id));
-  if (suspensosIds.length > 0) {
-    const { data: susp } = await supabase
-      .from("alunos")
-      .select(
-        "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas",
-      )
-      .in("id", suspensosIds);
-    const itensSuspensos = (susp ?? [])
-      .filter((a) => a.modo_cobranca !== "creditos")
-      .map((a) => ({
-        ...montaItemFechamento(
-          a,
-          registros.filter((r) => r.aluno_id === a.id),
-          fechamentos.get(a.id) ?? null,
-          year,
-          month,
-        ),
-        suspenso: true,
-      }))
-      .sort((a, b) => a.nome.localeCompare(b.nome));
-    itens.push(...itensSuspensos);
-  }
+  const itensSuspensos = (suspensosRes.data ?? [])
+    .filter((a) => a.modo_cobranca !== "creditos")
+    .map((a) => ({
+      ...montaItemFechamento(
+        a,
+        registros.filter((r) => r.aluno_id === a.id),
+        fechamentos.get(a.id) ?? null,
+        year,
+        month,
+      ),
+      suspenso: true,
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+  itens.push(...itensSuspensos);
 
   return (
     <div className="relative flex flex-1 flex-col px-5 pt-12">

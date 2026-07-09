@@ -235,13 +235,17 @@ export function CheckinList({
         </button>
       </section>
 
-      <ExtraSheet
-        open={sheetOpen}
-        roster={roster}
-        esperadosIds={esperadosIds}
-        onPick={addExtra}
-        onClose={() => setSheetOpen(false)}
-      />
+      {/* Montado só quando aberto: o Sheet fechado mantinha um overlay fixed
+          com backdrop-filter vivo (custo de compositor em TODA rolagem do Hoje). */}
+      {sheetOpen && (
+        <ExtraSheet
+          open
+          roster={roster}
+          esperadosIds={esperadosIds}
+          onPick={addExtra}
+          onClose={() => setSheetOpen(false)}
+        />
+      )}
     </>
   );
 }

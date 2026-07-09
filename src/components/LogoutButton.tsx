@@ -2,13 +2,15 @@
 
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 // Logout — mora nas Configurações (§4.4).
 export function LogoutButton() {
   const router = useRouter();
 
   async function sair() {
+    // Import dinâmico: o supabase-js inteiro saía no chunk do /config só por
+    // causa deste botão — carrega apenas se o usuário realmente sair.
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     await supabase.auth.signOut();
     router.replace("/login");

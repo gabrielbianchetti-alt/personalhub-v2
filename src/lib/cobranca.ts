@@ -13,6 +13,7 @@ import {
   type ProgressoPacote,
   type ValorDetalhado,
 } from "./aulas.ts";
+import { isoDe } from "./datas.ts";
 import type {
   Aluno,
   Fechamento,
@@ -143,6 +144,23 @@ export function montaItemFechamento(
     valor = Number(fechamento!.valor_final);
   }
 
+  // {dias} lista as aulas que CONTAM: agenda − faltas/desmarcadas datadas +
+  // extras datadas. Antes listava a agenda crua — no por_aula a mensagem
+  // cobrava 10 aulas e citava 12 datas, incluindo o dia em que o aluno faltou.
+  const naoAconteceu = new Set(
+    registrosDoMes
+      .filter((r) => r.tipo === "falta" || r.tipo === "desmarcada")
+      .map((r) => r.data),
+  );
+  const diasAulaIso = [
+    ...new Set([
+      ...ocorrenciasNoMes(aluno.dias_semana, year, month0)
+        .map((d) => isoDe(year, month0, d))
+        .filter((iso) => !naoAconteceu.has(iso)),
+      ...registrosDoMes.filter((r) => r.tipo === "extra").map((r) => r.data),
+    ]),
+  ].sort();
+
   return {
     alunoId: aluno.id,
     nome: aluno.nome,
@@ -155,9 +173,7 @@ export function montaItemFechamento(
     ajuste,
     ajusteMotivo: fechamento?.ajuste_motivo ?? null,
     valorAula: modo === "por_aula" ? Number(aluno.valor_mensal ?? 0) : null,
-    diasAula: ocorrenciasNoMes(aluno.dias_semana, year, month0).map(
-      (d) => `${String(d).padStart(2, "0")}/${String(month0 + 1).padStart(2, "0")}`,
-    ),
+    diasAula: diasAulaIso.map((iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`),
     enviadoEm: fechamento?.enviado_em ?? null,
     saldo: null,
     progresso: null,

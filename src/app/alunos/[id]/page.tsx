@@ -21,14 +21,31 @@ export default async function AlunoPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const sp = agoraSP();
+  const mesRef = mesRefIso(sp.year, sp.month);
 
-  const { data: aluno } = await supabase
-    .from("alunos")
-    .select(
-      "id, nome, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, horarios, turmas, horario, telefone, status, detalhes, created_at",
-    )
-    .eq("id", id)
-    .maybeSingle();
+  // 1 round-trip: as 4 queries dependem só do id da rota (era um waterfall de
+  // 3 awaits). Pacote/registros são especulativos — o braço que o modo_cobranca
+  // não usar custou uma query barata coberta por índice, e o TTFB caiu 2 RTTs.
+  const [alunoRes, pacoteRes, marcadasTodas, regs] = await Promise.all([
+    supabase
+      .from("alunos")
+      .select(
+        "id, nome, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, horarios, turmas, horario, telefone, status, detalhes, created_at",
+      )
+      .eq("id", id)
+      .maybeSingle(),
+    supabase
+      .from("pacotes_creditos")
+      .select("qtd_aulas, created_at")
+      .eq("aluno_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    buscaAulasPacote(supabase, { alunoId: id }),
+    buscaRegistros(supabase, { alunoId: id, de: mesRef, ate: sp.iso }),
+  ]);
+  const aluno = alunoRes.data;
   if (!aluno) notFound();
 
   // Pacote (modo creditos): progresso (usadas/qtd) + aulas marcadas (p/ cancelar).
@@ -36,19 +53,12 @@ export default async function AlunoPage({
   let aulas: AulaPacoteVM[] = [];
   let temPacote = false;
   if (aluno.modo_cobranca === "creditos") {
-    const { data: pacote } = await supabase
-      .from("pacotes_creditos")
-      .select("qtd_aulas, created_at")
-      .eq("aluno_id", id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const pacote = pacoteRes.data;
     if (pacote) {
       temPacote = true;
       const compraIso = pacote.created_at.slice(0, 10);
-      const hoje = agoraSP().iso;
-      const marcadas = await buscaAulasPacote(supabase, { alunoId: id, de: compraIso });
-      progresso = progressoPacote(pacote.qtd_aulas, marcadas, hoje);
+      const marcadas = marcadasTodas.filter((a) => a.data >= compraIso);
+      progresso = progressoPacote(pacote.qtd_aulas, marcadas, sp.iso);
       aulas = marcadas.map((a) => ({
         id: a.id,
         data: a.data,
@@ -60,9 +70,6 @@ export default async function AlunoPage({
   // Mini-histórico (mensalidade/por_aula): frequência do mês + últimas faltas.
   let historico: HistoricoVM | null = null;
   if (aluno.modo_cobranca !== "creditos") {
-    const sp = agoraSP();
-    const mesRef = mesRefIso(sp.year, sp.month);
-    const regs = await buscaRegistros(supabase, { alunoId: id, de: mesRef, ate: sp.iso });
     const exc = agregaExcecoes(regs);
     const cont = contagemMes(aluno.dias_semana, sp.year, sp.month, exc);
     const ultimasFaltas = regs

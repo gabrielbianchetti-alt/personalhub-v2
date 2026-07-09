@@ -6,6 +6,17 @@ import { readFile } from "node:fs/promises";
 import { ImageResponse } from "next/og";
 import { createClient } from "@/lib/supabase/server";
 import { buscaRegistros } from "@/lib/supabase/registros";
+
+// Fontes lidas 1x por processo (não por request) — buffers imutáveis.
+let fontesCache: Promise<[Buffer, Buffer, Buffer]> | null = null;
+function fontes() {
+  fontesCache ??= Promise.all([
+    readFile(new URL("./SchibstedGrotesk-400.ttf", import.meta.url)),
+    readFile(new URL("./SchibstedGrotesk-700.ttf", import.meta.url)),
+    readFile(new URL("./GeistMono-600.ttf", import.meta.url)),
+  ]);
+  return fontesCache;
+}
 import { montaItemFechamento } from "@/lib/cobranca";
 import {
   agoraSP,
@@ -24,10 +35,10 @@ export async function GET(
 ) {
   const { alunoId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return new Response("Entre no app para gerar o recibo.", { status: 401 });
+  // getClaims valida o JWT local (sem round-trip) — RLS segue protegendo.
+  const { data: claims } = await supabase.auth.getClaims();
+  if (!claims?.claims?.sub)
+    return new Response("Entre no app para gerar o recibo.", { status: 401 });
 
   const sp = agoraSP();
   const mes = new URL(req.url).searchParams.get("mes") ?? mesRefIso(sp.year, sp.month);
@@ -47,7 +58,9 @@ export async function GET(
     buscaRegistros(supabase, { alunoId, de: mes, ate: fimMes }),
     supabase
       .from("fechamentos")
-      .select("*")
+      .select(
+        "id, professor_id, aluno_id, mes_referencia, aulas_esperadas, faltas, extras, ajuste_manual, ajuste_motivo, valor_final, status, enviado_em, pago_em",
+      )
       .eq("aluno_id", alunoId)
       .eq("mes_referencia", mes)
       .maybeSingle(),
@@ -73,11 +86,7 @@ export async function GET(
 
   // Fontes da marca (Satori precisa do binário TTF). Carregadas do bundle via
   // import.meta.url — o Next as inclui no deploy.
-  const [schibsted400, schibsted700, geistMono600] = await Promise.all([
-    readFile(new URL("./SchibstedGrotesk-400.ttf", import.meta.url)),
-    readFile(new URL("./SchibstedGrotesk-700.ttf", import.meta.url)),
-    readFile(new URL("./GeistMono-600.ttf", import.meta.url)),
-  ]);
+  const [schibsted400, schibsted700, geistMono600] = await fontes();
 
   return new ImageResponse(
     (

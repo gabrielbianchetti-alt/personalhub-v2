@@ -321,9 +321,10 @@ export function CobrancaLista({
               </span>
             </div>
             <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-soft">
+              {/* translateX (compositor) em vez de animar width (layout). */}
               <div
-                className="h-full rounded-full bg-success transition-[width] duration-500"
-                style={{ width: `${Math.round(pctRecebido * 100)}%` }}
+                className="h-full w-full rounded-full bg-success transition-transform duration-500"
+                style={{ transform: `translateX(-${Math.round((1 - pctRecebido) * 100)}%)` }}
               />
             </div>
           </div>
@@ -460,13 +461,24 @@ export function CobrancaLista({
                         <Check size={16} className="inline" /> Pago
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => aoReabrir(item)}
-                        className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-soft px-4 py-2.5 text-sm font-medium text-text-muted active:opacity-80"
-                      >
-                        <RotateCcw size={14} /> Reabrir
-                      </button>
+                      <>
+                        {/* Recibo com carimbo PAGO — o gesto da marca (§6.4) era
+                            inalcançável justamente depois de pago. */}
+                        <button
+                          type="button"
+                          onClick={() => setSheet({ tipo: "recibo", alunoId: item.alunoId })}
+                          className="flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-accent-soft py-2.5 text-sm font-medium text-accent active:opacity-90"
+                        >
+                          <ImageIcon size={14} /> Recibo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => aoReabrir(item)}
+                          className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-soft px-4 py-2.5 text-sm font-medium text-text-muted active:opacity-80"
+                        >
+                          <RotateCcw size={14} /> Reabrir
+                        </button>
+                      </>
                     )}
                     {item.status === "aberto" && (
                       <button

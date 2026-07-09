@@ -29,7 +29,9 @@ export default async function HojePage() {
         .from("alunos")
         .select("id, nome, horario, horarios, dias_semana, created_at")
         .eq("status", "ativo"),
-      buscaRegistros(supabase, { de: janelaInicio, ate: sp.iso }),
+      // Só as exceções de HOJE — a janela de 7 dias fica p/ dias_resolvidos
+      // (montaPendencias decide por dias_resolvidos, não por registros).
+      buscaRegistros(supabase, { de: sp.iso, ate: sp.iso }),
       buscaAulasPacote(supabase, { de: sp.iso, ate: sp.iso }), // aulas de pacote de hoje
       supabase.from("dias_resolvidos").select("data").gte("data", janelaInicio),
       supabase.from("professores").select("created_at, nome, chave_pix").single(),
@@ -39,7 +41,7 @@ export default async function HojePage() {
 
   const alunosHoje = montaAlunosHoje(
     ativos,
-    registros.filter((r) => r.data === sp.iso),
+    registros,
     sp.dow,
     aulasPacoteHoje.map((a) => ({ id: a.id, aluno_id: a.aluno_id, horario: a.horario })),
   );

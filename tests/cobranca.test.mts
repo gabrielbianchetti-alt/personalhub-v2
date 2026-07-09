@@ -222,6 +222,24 @@ test("diasAula = dias de aula no mês de referência (ter+qui jun/2026)", () => 
   );
 });
 
+test("diasAula reflete o que CONTA: falta sai da lista, extra entra", () => {
+  const item = montaItemFechamento(
+    { ...ALUNO_BASE, dias_semana: [2, 4], modo_cobranca: "por_aula" as const },
+    [
+      // faltou na ter 09/06 — a data não pode aparecer na mensagem de cobrança
+      { tipo: "falta", quantidade: 1, data: "2026-06-09", valor: null },
+      // extra no sáb 06/06 — aconteceu e conta, entra ordenada
+      { tipo: "extra", quantidade: 1, data: "2026-06-06", valor: null },
+    ],
+    null,
+    2026,
+    5,
+  );
+  assert.deepEqual(item.diasAula, [
+    "02/06", "04/06", "06/06", "11/06", "16/06", "18/06", "23/06", "25/06", "30/06",
+  ]);
+});
+
 test("resumoMes.totalRecebido soma só os fechamentos pagos", () => {
   const pago = montaItemFechamento(
     { ...ALUNO_BASE, valor_mensal: 300, modo_cobranca: "mensalidade" as const },
