@@ -3,7 +3,19 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Rotas públicas (não exigem sessão). /offline é o fallback do service worker:
 // precisa ser público pra o precache gravar a página certa (e não a de login).
-const PUBLIC_PATHS = ["/login", "/atualizar-senha", "/offline"];
+// Assets de identidade também: /opengraph-image (crawler do WhatsApp não tem
+// cookie), /manifest.webmanifest (o browser busca SEM credenciais por padrão —
+// gated quebrava o manifest do PWA), /apple-icon e /sw.js (update do SW não
+// pode receber redirect). Nenhum expõe dado; são gerados do brand.
+const PUBLIC_PATHS = [
+  "/login",
+  "/atualizar-senha",
+  "/offline",
+  "/opengraph-image",
+  "/manifest.webmanifest",
+  "/apple-icon",
+  "/sw.js",
+];
 
 // Renova a sessão a cada request e protege as rotas do app.
 // Padrão @supabase/ssr para App Router (adaptado a proxy.ts / Next 16).
