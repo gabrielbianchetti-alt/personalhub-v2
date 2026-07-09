@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { salvarConta } from "@/app/actions/conta";
 import { renderMensagem, TEMPLATE_LEMBRETE, TEMPLATE_PADRAO } from "@/lib/whatsapp";
+import { InstalarApp } from "./InstalarApp";
 import { LogoutButton } from "./LogoutButton";
 
 // Variáveis que se auto-preenchem — o usuário toca pra inserir, sem digitar {}.
@@ -275,6 +276,8 @@ export function ConfigClient({
           ))}
         </div>
       </div>
+
+      <InstalarApp />
 
       <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
         <div className="min-w-0">
