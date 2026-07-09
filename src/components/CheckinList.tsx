@@ -83,7 +83,7 @@ export function CheckinList({
     );
   };
 
-  const addExtra = (rosterId: string) => {
+  const addExtra = (rosterId: string, valor: number | null) => {
     vibra();
     setSheetOpen(false);
     const existente = alunos.find((a) => a.id === rosterId);
@@ -111,7 +111,7 @@ export function CheckinList({
         { id: r.id, nome: r.nome, horario: "", faltou: false, extras: 1, avulso: true },
       ];
     });
-    persistir(() => adicionarExtra(rosterId, hojeIso), desfazer);
+    persistir(() => adicionarExtra(rosterId, hojeIso, "checkin", valor), desfazer);
   };
 
   // Aula de pacote lançada por engano: cancelar devolve o crédito, sem sair do Hoje.

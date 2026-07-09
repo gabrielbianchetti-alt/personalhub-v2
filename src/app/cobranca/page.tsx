@@ -5,6 +5,7 @@ import {
   type RegistroLeve,
 } from "@/lib/supabase/registros";
 import {
+  addMeses,
   agoraSP,
   diasNoMes,
   isoDe,
@@ -62,18 +63,32 @@ export default async function CobrancaPage({
       .eq("mes_referencia", mesRef),
     supabase
       .from("professores")
-      .select("template_mensagem, nome, chave_pix")
+      .select("template_mensagem, template_lembrete, nome, chave_pix")
       .single(),
   ]);
-  // Pré-migração 0006 (sem chave_pix): segue sem Pix em vez de quebrar.
-  const prof = profRes.error
-    ? {
-        ...(
-          await supabase.from("professores").select("template_mensagem, nome").single()
-        ).data,
-        chave_pix: null,
-      }
-    : profRes.data;
+  // Pré-migração: degrada progressivamente (0015 sem lembrete → 0006 sem Pix)
+  // em vez de quebrar — e sem perder a chave Pix se só a 0015 faltar.
+  let prof: {
+    template_mensagem?: string | null;
+    template_lembrete?: string | null;
+    nome?: string | null;
+    chave_pix?: string | null;
+  } | null = profRes.data;
+  if (profRes.error) {
+    const semLembrete = await supabase
+      .from("professores")
+      .select("template_mensagem, nome, chave_pix")
+      .single();
+    prof = semLembrete.error
+      ? {
+          ...(
+            await supabase.from("professores").select("template_mensagem, nome").single()
+          ).data,
+          template_lembrete: null,
+          chave_pix: null,
+        }
+      : { ...semLembrete.data, template_lembrete: null };
+  }
 
   const ativos = alunosRes.data ?? [];
   const fechamentos = new Map<string, Fechamento>(
@@ -108,7 +123,7 @@ export default async function CobrancaPage({
   const ativosIds = new Set(ativos.map((a) => a.id));
   const suspensosIds = [...fechamentos.keys()].filter((id) => !ativosIds.has(id));
 
-  const [pacotesRes, todasAulas, suspensosRes] = await Promise.all([
+  const [pacotesRes, todasAulas, suspensosRes, vendasRes] = await Promise.all([
     creditoIds.length
       ? supabase
           .from("pacotes_creditos")
@@ -127,7 +142,18 @@ export default async function CobrancaPage({
           )
           .in("id", suspensosIds)
       : Promise.resolve({ data: [] }),
+    // Pacotes VENDIDOS no mês em foco: a receita de créditos é a venda (§4.3),
+    // mas o card-herói a ignorava — "quanto entrou" ficava subestimado.
+    supabase
+      .from("pacotes_creditos")
+      .select("valor")
+      .gte("created_at", mesRef)
+      .lt("created_at", addMeses(mesRef, 1)),
   ]);
+  const vendasPacotes = {
+    qtd: (vendasRes.data ?? []).length,
+    total: (vendasRes.data ?? []).reduce((s, p) => s + Number(p.valor), 0),
+  };
 
   // Pacote mais recente de cada aluno (ordena desc, 1º por aluno em JS).
   const pacotePorAluno = new Map<
@@ -206,7 +232,9 @@ export default async function CobrancaPage({
         somenteLeitura={mesRef > mesAtual}
         ehPassado={mesRef < mesAtual}
         template={prof?.template_mensagem ?? null}
+        templateLembrete={prof?.template_lembrete ?? null}
         chavePix={prof?.chave_pix ?? null}
+        vendasPacotes={vendasPacotes}
       />
     </div>
   );

@@ -10,6 +10,12 @@ export const TEMPLATE_PACOTE =
   "Oi {nome}! Bora renovar: pacote de {qtd} aulas por {valor}. " +
   "Confirmando, já deixo agendado. 💪";
 
+// Lembrete de cobrança já enviada (follow-up "enviada · 3d"). Tom mais leve
+// que a cobrança — reenviar o texto do fechamento soava como spam.
+export const TEMPLATE_LEMBRETE =
+  "Oi {nome}! Passando pra lembrar do fechamento de {mes} — {valor}.\n\n" +
+  "Qualquer coisa me chama 🙏";
+
 export interface DadosMensagem {
   nome: string;
   valor: string; // já formatado em BRL

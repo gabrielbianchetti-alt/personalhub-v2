@@ -30,6 +30,7 @@ import {
 } from "@/lib/compartilhar";
 import {
   renderMensagem,
+  TEMPLATE_LEMBRETE,
   TEMPLATE_PACOTE,
   primeiroNome,
   telefoneWa,
@@ -65,7 +66,9 @@ export function CobrancaLista({
   somenteLeitura = false,
   ehPassado = false,
   template,
+  templateLembrete = null,
   chavePix,
+  vendasPacotes = null,
 }: {
   itens: CobrancaItemVM[];
   mesRef: string;
@@ -73,7 +76,9 @@ export function CobrancaLista({
   somenteLeitura?: boolean;
   ehPassado?: boolean;
   template: string | null;
+  templateLembrete?: string | null;
   chavePix: string | null;
+  vendasPacotes?: { qtd: number; total: number } | null;
 }) {
   const router = useRouter();
   const [lista, setLista] = useState(itens);
@@ -130,6 +135,20 @@ export function CobrancaLista({
     setGuia(null); // sair no meio cancela a rodada guiada
   };
 
+  // Rodada guiada: aluno de pacote entra com o sheet de VENDA (renovação);
+  // mensalidade/por_aula entram com o de cobrança.
+  const abrirSheetDe = (alunoId: string) => {
+    const it = lista.find((i) => i.alunoId === alunoId);
+    setSheet({
+      tipo: it?.modo === "creditos" ? "pacote" : "cobrar",
+      alunoId,
+    });
+  };
+
+  /** Pacote com saldo no fim: a renovação é a "cobrança" dele (§4.3). */
+  const precisaRenovar = (i: CobrancaItemVM) =>
+    i.modo === "creditos" && i.saldo !== null && i.saldo <= 2;
+
   /** Avança a rodada guiada (ou só fecha o sheet fora dela). */
   const avancar = (doneId: string) => {
     if (!guia) {
@@ -139,7 +158,7 @@ export function CobrancaLista({
     const fila = guia.fila.filter((id) => id !== doneId);
     if (fila.length > 0) {
       setGuia({ ...guia, fila });
-      setSheet({ tipo: "cobrar", alunoId: fila[0] });
+      abrirSheetDe(fila[0]);
     } else {
       setGuia(null);
       setSheet(null);
@@ -151,11 +170,14 @@ export function CobrancaLista({
 
   const iniciarFechamentoGuiado = () => {
     const fila = lista
-      .filter((i) => i.modo !== "creditos" && i.status === "aberto")
+      .filter(
+        (i) =>
+          (i.modo !== "creditos" && i.status === "aberto") || precisaRenovar(i),
+      )
       .map((i) => i.alunoId);
     if (fila.length === 0) return;
     setGuia({ fila, total: fila.length });
-    setSheet({ tipo: "cobrar", alunoId: fila[0] });
+    abrirSheetDe(fila[0]);
   };
 
   // Enviada no WhatsApp → status + celebração discreta (§4.3).
@@ -329,13 +351,27 @@ export function CobrancaLista({
             </div>
           </div>
         )}
-        {!somenteLeitura && resumo.abertos > 0 && (
+        {vendasPacotes && vendasPacotes.qtd > 0 && (
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+              Pacotes vendidos · {vendasPacotes.qtd}
+            </span>
+            <span className="font-money text-sm font-semibold text-text">
+              {formatBRL(vendasPacotes.total)}
+            </span>
+          </div>
+        )}
+        {!somenteLeitura && resumo.abertos + lista.filter(precisaRenovar).length > 0 && (
           <button
             type="button"
             onClick={iniciarFechamentoGuiado}
             className="mt-2.5 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-accent py-2.5 text-sm font-medium text-accent-contrast active:opacity-90"
           >
-            Fechar o mês · {resumo.abertos} {resumo.abertos === 1 ? "aberta" : "abertas"}
+            Fechar o mês ·{" "}
+            {resumo.abertos + lista.filter(precisaRenovar).length}{" "}
+            {resumo.abertos + lista.filter(precisaRenovar).length === 1
+              ? "pendente"
+              : "pendentes"}
             <ChevronRight size={16} strokeWidth={2.4} />
           </button>
         )}
@@ -516,6 +552,7 @@ export function CobrancaLista({
           item={sheetItem}
           nomeMesAtual={nomeMesAtual}
           template={template}
+          templateLembrete={templateLembrete}
           chavePix={chavePix}
           progresso={guia ? { atual: guia.total - guia.fila.length + 1, total: guia.total } : null}
           onEnviar={aoEnviar}
@@ -548,10 +585,12 @@ export function CobrancaLista({
       {sheet?.tipo === "pacote" && sheetItem && (
         <PacoteSheet
           item={sheetItem}
+          progresso={guia ? { atual: guia.total - guia.fila.length + 1, total: guia.total } : null}
+          onPular={guia ? () => avancar(sheetItem.alunoId) : null}
           onVendido={(link) => {
             if (link) window.open(link, "_blank", "noopener");
-            setSheet(null);
             router.refresh();
+            avancar(sheetItem.alunoId);
           }}
           onTelefone={(tel) =>
             setLista((prev) =>
@@ -573,6 +612,7 @@ function CobrarSheet({
   item,
   nomeMesAtual,
   template,
+  templateLembrete,
   chavePix,
   progresso,
   onEnviar,
@@ -584,6 +624,7 @@ function CobrarSheet({
   item: CobrancaItemVM;
   nomeMesAtual: string;
   template: string | null;
+  templateLembrete: string | null;
   chavePix: string | null;
   progresso: { atual: number; total: number } | null;
   onEnviar: (item: CobrancaItemVM, link: string) => void;
@@ -599,9 +640,10 @@ function CobrarSheet({
   const telefoneOk = telefoneWa(item.telefone);
   const lembrete = item.status === "enviado";
 
-  // Lembrete usa o MESMO modelo configurado (o que aparece no "Como vai chegar"
-  // do Config) — o que você vê é o que é enviado, sem template-fantasma.
-  const corpo = renderMensagem(template, {
+  // Lembrete tem tom próprio (mais leve que a cobrança — reenviar o mesmo
+  // texto soava spam): usa o modelo do Config ou o padrão TEMPLATE_LEMBRETE.
+  // O preview continua sendo exatamente o que é enviado.
+  const corpo = renderMensagem(lembrete ? (templateLembrete ?? TEMPLATE_LEMBRETE) : template, {
     nome: item.nome,
     valor: formatBRL(item.valor),
     mes: nomeMesAtual,
@@ -898,11 +940,15 @@ function AjusteSheet({
 // ── Créditos: vender pacote = a cobrança (§4.3) ─────────────────────
 function PacoteSheet({
   item,
+  progresso,
+  onPular,
   onVendido,
   onTelefone,
   onClose,
 }: {
   item: CobrancaItemVM;
+  progresso: { atual: number; total: number } | null;
+  onPular: (() => void) | null;
   onVendido: (waUrl: string | null) => void;
   onTelefone: (tel: string) => void;
   onClose: () => void;
@@ -971,7 +1017,13 @@ function PacoteSheet({
 
   if (!telefoneOk) {
     return (
-      <Sheet open title={`Pacote de ${primeiroNome(item.nome)}`} onClose={onClose}>
+      <Sheet
+      open
+      title={`Pacote de ${primeiroNome(item.nome)}${
+        progresso ? ` · ${progresso.atual}/${progresso.total}` : ""
+      }`}
+      onClose={onClose}
+    >
         <p className="text-sm text-text-muted">
           Primeira cobrança — qual o WhatsApp de {primeiroNome(item.nome)}?
         </p>
@@ -1000,12 +1052,28 @@ function PacoteSheet({
         >
           Só registrar a venda (sem cobrar)
         </button>
+        {onPular && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onPular}
+            className="mt-2 w-full rounded-2xl py-2.5 text-sm font-medium text-text-muted active:bg-surface-soft disabled:opacity-60"
+          >
+            Pular este aluno
+          </button>
+        )}
       </Sheet>
     );
   }
 
   return (
-    <Sheet open title={`Pacote de ${primeiroNome(item.nome)}`} onClose={onClose}>
+    <Sheet
+      open
+      title={`Pacote de ${primeiroNome(item.nome)}${
+        progresso ? ` · ${progresso.atual}/${progresso.total}` : ""
+      }`}
+      onClose={onClose}
+    >
       {item.saldo !== null && (
         <p className="text-sm text-text-muted">
           Saldo atual: <span className="font-medium text-text">{item.saldo} aulas</span>
@@ -1059,6 +1127,16 @@ function PacoteSheet({
       >
         Só registrar a venda
       </button>
+      {onPular && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={onPular}
+          className="mt-2 w-full rounded-2xl py-2.5 text-sm font-medium text-text-muted active:bg-surface-soft disabled:opacity-60"
+        >
+          Pular este aluno
+        </button>
+      )}
     </Sheet>
   );
 }

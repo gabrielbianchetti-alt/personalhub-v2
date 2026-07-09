@@ -72,8 +72,13 @@ export async function adicionarExtra(
   alunoId: string,
   dataIso: string,
   origem: RegistroOrigem = "checkin",
+  // Aula extra esporádica pode ter preço próprio (migração 0012); null/omitido
+  // = valor solo. O motor (valorPorAulaDetalhado) já soma e.valor ?? solo.
+  valor: number | null = null,
 ): Promise<Resultado> {
   return executa(async () => {
+    if (valor !== null && (!Number.isFinite(valor) || valor < 0 || valor > 100_000))
+      throw new Error("Valor da aula inválido.");
     const { supabase, professorId } = await validar(dataIso);
     // Insert primeiro: o unique (aluno, data, tipo) resolve a corrida do toque
     // duplo — o perdedor cai no 23505 e vira incremento (antes estourava erro).
@@ -83,6 +88,7 @@ export async function adicionarExtra(
       data: dataIso,
       tipo: "extra",
       origem,
+      ...(valor !== null ? { valor } : {}),
     });
     if (!insErr) {
       revalidatePath("/");
@@ -99,9 +105,13 @@ export async function adicionarExtra(
       .maybeSingle();
     if (selErr) checaMigracao(selErr.message);
     if (!existente) throw new Error("Não salvou — tente de novo.");
+    // O dia agrega extras numa linha só (unique) — valor informado vence.
     const { error } = await supabase
       .from("registros_aula")
-      .update({ quantidade: existente.quantidade + 1 })
+      .update({
+        quantidade: existente.quantidade + 1,
+        ...(valor !== null ? { valor } : {}),
+      })
       .eq("id", existente.id);
     if (error) throw new Error(error.message);
     revalidatePath("/");

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { salvarConta } from "@/app/actions/conta";
-import { renderMensagem, TEMPLATE_PADRAO } from "@/lib/whatsapp";
+import { renderMensagem, TEMPLATE_LEMBRETE, TEMPLATE_PADRAO } from "@/lib/whatsapp";
 import { LogoutButton } from "./LogoutButton";
 
 // Variáveis que se auto-preenchem — o usuário toca pra inserir, sem digitar {}.
@@ -38,16 +38,19 @@ export function ConfigClient({
   email,
   nome: nomeInicial,
   template: templateInicial,
+  templateLembrete: lembreteInicial,
   chavePix: chavePixInicial,
 }: {
   email: string;
   nome: string;
   template: string;
+  templateLembrete: string;
   chavePix: string;
 }) {
   const [nome, setNome] = useState(nomeInicial);
   // Começa com o texto padrão já preenchido e editável (some a página em branco).
   const [template, setTemplate] = useState(templateInicial || TEMPLATE_PADRAO);
+  const [lembrete, setLembrete] = useState(lembreteInicial || TEMPLATE_LEMBRETE);
   const [chavePix, setChavePix] = useState(chavePixInicial);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [tema, setTema] = useState<Tema>("auto");
@@ -166,6 +169,25 @@ export function ConfigClient({
           </div>
         </div>
 
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Mensagem de lembrete
+          </span>
+          <textarea
+            value={lembrete}
+            onChange={(e) => {
+              setLembrete(e.target.value);
+              setSalvo(false);
+            }}
+            rows={3}
+            className="resize-none rounded-xl bg-surface-soft px-3 py-2.5 text-[15px] leading-relaxed text-text outline-none"
+          />
+          <span className="text-xs text-text-muted">
+            Vai no botão “Lembrar” de cobrança já enviada. Mesmas variáveis da
+            mensagem de cobrança.
+          </span>
+        </div>
+
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
             Chave Pix
@@ -211,7 +233,7 @@ export function ConfigClient({
             setErro(null);
             startTransition(async () => {
               try {
-                const r = await salvarConta(nome, template, chavePix);
+                const r = await salvarConta(nome, template, chavePix, lembrete);
                 if (!r.ok) {
                   setErro(r.erro);
                   return;

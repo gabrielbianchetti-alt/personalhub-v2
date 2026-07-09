@@ -20,6 +20,7 @@ function fontes() {
 import { montaItemFechamento } from "@/lib/cobranca";
 import {
   agoraSP,
+  diaSemanaCurto,
   diasNoMes,
   formatBRL,
   isoDe,
@@ -27,7 +28,7 @@ import {
   nomeMes,
   parteIso,
 } from "@/lib/datas";
-import type { Fechamento } from "@/lib/tipos";
+import type { Fechamento, TurmaDia } from "@/lib/tipos";
 
 export async function GET(
   req: Request,
@@ -83,6 +84,15 @@ export async function GET(
   );
   const professor = profRes.data?.nome ?? "Personal trainer";
   const pago = item.status === "pago";
+
+  // Dupla/trio: o parceiro é cadastrado em turmas mas nunca aparecia onde o
+  // ALUNO vê (a vitrine, §1). "dupla com Ana (qua)" — só dias com nome.
+  const parceiros = Object.entries(
+    ((aluno.turmas ?? {}) as Record<string, TurmaDia>),
+  )
+    .filter(([, t]) => t?.nome)
+    .map(([d, t]) => `${t.tipo} com ${t.nome} (${diaSemanaCurto(Number(d))})`)
+    .join(" · ");
 
   // Fontes da marca (Satori precisa do binário TTF). Carregadas do bundle via
   // import.meta.url — o Next as inclui no deploy.
@@ -160,6 +170,9 @@ export async function GET(
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 48, color: "#5A6472" }}>{aluno.nome}</div>
+          {parceiros && (
+            <div style={{ fontSize: 30, color: "#5A6472" }}>{parceiros}</div>
+          )}
           <div
             style={{
               fontSize: 142,
