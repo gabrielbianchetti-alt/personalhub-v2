@@ -27,8 +27,15 @@ function fimDeMes(): boolean {
 export function BottomTabBar() {
   const pathname = usePathname();
 
-  // Login e redefinição de senha não fazem parte da navegação do app.
-  if (pathname === "/login" || pathname === "/atualizar-senha") return null;
+  // Rotas fora da navegação do app: auth + páginas públicas (landing/legais).
+  const FORA_DO_APP = [
+    "/login",
+    "/atualizar-senha",
+    "/conhecer",
+    "/termos",
+    "/privacidade",
+  ];
+  if (FORA_DO_APP.includes(pathname)) return null;
 
   // Índice do destino ativo → posição da pílula. -1 (ex.: /config) esconde.
   const activeIdx = TABS.findIndex((t) => isActive(pathname, t.href));

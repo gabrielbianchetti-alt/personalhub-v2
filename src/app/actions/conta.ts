@@ -54,3 +54,23 @@ export async function salvarConta(
     revalidatePath("/cobranca");
   });
 }
+
+/**
+ * Exclusão de conta + TODOS os dados (LGPD, ciclo 3b). A função no banco
+ * (migração 0016, security definer) deleta o próprio auth.users — a cascata
+ * do schema derruba professores → alunos → registros → pacotes → fechamentos.
+ * Irreversível por desenho. Depois do ok, o client faz signOut e sai.
+ */
+export async function excluirConta(): Promise<Resultado> {
+  return executa(async () => {
+    const { supabase } = await professorAtual();
+    const { error } = await supabase.rpc("excluir_minha_conta");
+    if (error) {
+      if (error.message.includes("excluir_minha_conta"))
+        throw new Error(
+          "Banco desatualizado: rode a migração 0016 no SQL Editor do Supabase.",
+        );
+      throw new Error(error.message);
+    }
+  });
+}

@@ -6,7 +6,9 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
-import { salvarConta } from "@/app/actions/conta";
+import { excluirConta, salvarConta } from "@/app/actions/conta";
+import { createClient } from "@/lib/supabase/client";
+import { Sheet } from "./Sheet";
 import {
   renderMensagem,
   telefoneWa,
@@ -67,6 +69,30 @@ export function ConfigClient({
   const [salvo, setSalvo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Exclusão de conta (LGPD, ciclo 3b): sheet + aceite explícito do irreversível.
+  const [excluirAberto, setExcluirAberto] = useState(false);
+  const [cienteExclusao, setCienteExclusao] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
+  async function confirmarExclusao() {
+    setErroExclusao(null);
+    setExcluindo(true);
+    try {
+      const r = await excluirConta();
+      if (!r.ok) {
+        setErroExclusao(r.erro);
+        return;
+      }
+      // Conta já não existe no banco — encerra a sessão local e sai do app.
+      await createClient().auth.signOut();
+      window.location.assign("/conhecer");
+    } catch {
+      setErroExclusao("Não consegui excluir — tente de novo.");
+    } finally {
+      setExcluindo(false);
+    }
+  }
 
   // Sincroniza com o localStorage só depois de hidratar (SSR não tem acesso).
   useEffect(() => {
@@ -322,6 +348,69 @@ export function ConfigClient({
         </div>
         <LogoutButton />
       </div>
+
+      {/* Zona de perigo (LGPD): sair de vez, levando tudo. Discreto de
+          propósito — é direito do titular, não call-to-action. */}
+      <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Excluir conta
+          </p>
+          <p className="mt-0.5 text-sm text-text-muted">
+            Apaga sua conta e todos os dados. Irreversível.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setCienteExclusao(false);
+            setErroExclusao(null);
+            setExcluirAberto(true);
+          }}
+          className="shrink-0 rounded-full bg-surface-soft px-4 py-2 text-sm font-medium text-danger active:bg-danger/10"
+        >
+          Excluir…
+        </button>
+      </div>
+
+      {excluirAberto && (
+        <Sheet open title="Excluir conta" onClose={() => setExcluirAberto(false)}>
+          <p className="text-sm leading-relaxed text-text">
+            Isso apaga <strong>tudo, agora e para sempre</strong>: seus alunos,
+            registros de aula, pacotes e fechamentos de cobrança. Não tem
+            desfazer, não tem lixeira.
+          </p>
+          <label className="mt-4 flex items-start gap-2.5 text-sm text-text">
+            <input
+              type="checkbox"
+              checked={cienteExclusao}
+              onChange={(e) => setCienteExclusao(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-[var(--danger)]"
+            />
+            Entendo que é irreversível.
+          </label>
+          {erroExclusao && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {erroExclusao}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={!cienteExclusao || excluindo}
+            onClick={confirmarExclusao}
+            className="mt-4 w-full rounded-full bg-danger py-3 text-sm font-medium text-white active:opacity-90 disabled:opacity-40"
+          >
+            {excluindo ? "Excluindo…" : "Excluir minha conta e todos os dados"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setExcluirAberto(false)}
+            className="mt-2 w-full rounded-full py-2.5 text-sm font-medium text-text-muted active:bg-surface-soft"
+          >
+            Cancelar
+          </button>
+        </Sheet>
+      )}
     </div>
   );
 }

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [aceite, setAceite] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -61,10 +63,20 @@ export default function LoginPage() {
   async function criar() {
     setErro(null);
     setAviso(null);
+    // LGPD (ciclo 3b): criar conta exige aceite afirmativo dos termos; o
+    // instante do consentimento fica nos metadados da conta.
+    if (!aceite) {
+      setErro("Para criar a conta, aceite os termos e a política de privacidade.");
+      return;
+    }
     setLoading(true);
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.auth.signUp({ email, password: senha });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: senha,
+        options: { data: { aceite_termos_em: new Date().toISOString() } },
+      });
       if (error) {
         setErro(error.message);
         return;
@@ -117,6 +129,30 @@ export default function LoginPage() {
 
           {erro && <p className="text-sm text-danger">{erro}</p>}
           {aviso && <p className="text-sm text-success">{aviso}</p>}
+
+          {/* Aceite obrigatório só p/ CRIAR conta (entrar não re-pede). */}
+          <label className="flex items-start gap-2.5 px-1 text-xs leading-relaxed text-text-muted">
+            <input
+              type="checkbox"
+              checked={aceite}
+              onChange={(e) => setAceite(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]"
+            />
+            <span>
+              Li e aceito os{" "}
+              <Link href="/termos" className="underline underline-offset-2 text-text">
+                termos de uso
+              </Link>{" "}
+              e a{" "}
+              <Link
+                href="/privacidade"
+                className="underline underline-offset-2 text-text"
+              >
+                política de privacidade
+              </Link>
+              . (Necessário só para criar conta.)
+            </span>
+          </label>
 
           <button
             type="submit"

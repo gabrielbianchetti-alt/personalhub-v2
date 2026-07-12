@@ -15,6 +15,11 @@ const PUBLIC_PATHS = [
   "/manifest.webmanifest",
   "/apple-icon",
   "/sw.js",
+  // Fundação #8/#4 (ciclo 3b): landing + páginas legais — o estranho precisa
+  // entender o produto e ler termos/privacidade SEM conta.
+  "/conhecer",
+  "/termos",
+  "/privacidade",
 ];
 
 // Renova a sessão a cada request e protege as rotas do app.
@@ -54,10 +59,11 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 
-  // Sem sessão em rota protegida → manda pro login.
+  // Sem sessão em rota protegida → o "/" (porta de entrada de estranho) vai
+  // pra LANDING; deep links (PWA, favoritos) continuam indo pro login.
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = path === "/" ? "/conhecer" : "/login";
     const redirect = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));
     return redirect;
