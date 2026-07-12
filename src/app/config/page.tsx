@@ -44,6 +44,9 @@ export default async function ConfigPage() {
       template={prof?.template_mensagem ?? ""}
       templateLembrete={prof?.template_lembrete ?? ""}
       chavePix={prof?.chave_pix ?? ""}
+      // Fundação #6: canal de suporte. O número fica em env (repo é público);
+      // sem a env o card simplesmente não aparece.
+      suporteWa={process.env.NEXT_PUBLIC_WHATSAPP_SUPORTE ?? null}
     />
   );
 }

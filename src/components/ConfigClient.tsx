@@ -7,7 +7,13 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { salvarConta } from "@/app/actions/conta";
-import { renderMensagem, TEMPLATE_LEMBRETE, TEMPLATE_PADRAO } from "@/lib/whatsapp";
+import {
+  renderMensagem,
+  telefoneWa,
+  waLink,
+  TEMPLATE_LEMBRETE,
+  TEMPLATE_PADRAO,
+} from "@/lib/whatsapp";
 import { InstalarApp } from "./InstalarApp";
 import { LogoutButton } from "./LogoutButton";
 
@@ -41,12 +47,15 @@ export function ConfigClient({
   template: templateInicial,
   templateLembrete: lembreteInicial,
   chavePix: chavePixInicial,
+  suporteWa = null,
 }: {
   email: string;
   nome: string;
   template: string;
   templateLembrete: string;
   chavePix: string;
+  /** número do suporte (env NEXT_PUBLIC_WHATSAPP_SUPORTE) — null esconde o card */
+  suporteWa?: string | null;
 }) {
   const [nome, setNome] = useState(nomeInicial);
   // Começa com o texto padrão já preenchido e editável (some a página em branco).
@@ -278,6 +287,31 @@ export function ConfigClient({
       </div>
 
       <InstalarApp />
+
+      {/* Fundação #6: sem canal, o primeiro usuário some em silêncio. */}
+      {telefoneWa(suporteWa) && (
+        <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+              Suporte
+            </p>
+            <p className="mt-0.5 text-sm text-text">
+              Achou um problema ou tem uma ideia?
+            </p>
+          </div>
+          <a
+            href={waLink(
+              telefoneWa(suporteWa)!,
+              "Oi! Preciso de ajuda com o PersonalHub.",
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-full bg-accent-soft px-4 py-2 text-sm font-medium text-accent active:opacity-90"
+          >
+            Chama no WhatsApp
+          </a>
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
         <div className="min-w-0">

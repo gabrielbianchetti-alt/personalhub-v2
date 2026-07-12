@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, Schibsted_Grotesk } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { SwipeCarrossel } from "@/components/SwipeCarrossel";
@@ -70,6 +71,10 @@ export default function RootLayout({
         </div>
         <BottomTabBar />
         <RegistraSW />
+        {/* Fundação #7: telemetria mínima (pageviews/visitantes na Vercel) —
+            sem ela o loop de produto roda cego. Evento de ativação (cobrança
+            enviada) é disparado no CobrancaLista via track(). */}
+        <Analytics />
       </body>
     </html>
   );

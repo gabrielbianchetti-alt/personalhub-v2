@@ -18,6 +18,7 @@ import {
   Share2,
   SlidersHorizontal,
 } from "lucide-react";
+import { track } from "@vercel/analytics";
 import { resumoMes, type CobrancaItemVM } from "@/lib/cobranca";
 import type { DividasVM } from "@/lib/dividas";
 import { diaMesCurto, formatBRL, listaDatas, parteIso } from "@/lib/datas";
@@ -204,6 +205,10 @@ export function CobrancaLista({
   // Enviada no WhatsApp → status + celebração discreta (§4.3).
   const aoEnviar = (item: CobrancaItemVM, link: string) => {
     window.open(link, "_blank", "noopener");
+    // Evento de ativação P-4 (sem dado pessoal — só o modo). No plano Hobby a
+    // Vercel ignora custom events; o pageview conta mesmo assim e isto já
+    // fica pronto pro upgrade. O fato em si também vive em `enviado_em`.
+    track("cobranca_enviada", { modo: item.modo });
     vibra(15);
     const statusAnterior = item.status;
     setStatus(item.alunoId, "enviado");
