@@ -178,6 +178,47 @@ test("montaSnapshotFechamento por_aula com dupla: falta no preço do dia", () =>
   assert.equal(snap.valor_final, 550);
 });
 
+test("ciclo-03: falta num mês e reposição no outro — cada registro conta no SEU mês", () => {
+  const base = {
+    professorId: "p1",
+    alunoId: "a1",
+    diasSemana: [1, 4], // seg + qui
+    turmas: {},
+    valorMensal: 80,
+    valorDupla: null,
+    valorTrio: null,
+    modo: "por_aula" as const,
+    ajuste: 0,
+    motivo: null,
+  };
+  // Julho/2026 (começa qua): seg 6,13,20,27 + qui 2,9,16,23,30 = 9 ocorrências.
+  // Falta na qui 30/jul desconta o dia; a reposição NÃO compensa julho.
+  const jul = montaSnapshotFechamento({
+    ...base,
+    mesRef: "2026-07-01",
+    year: 2026,
+    month0: 6,
+    registros: [{ tipo: "falta", quantidade: 1, data: "2026-07-30", valor: null }],
+  });
+  assert.equal(jul.faltas, 1);
+  assert.equal(jul.extras, 0);
+  assert.equal(jul.valor_final, 640); // (9−1)×80 — julho perde a aula de julho
+
+  // Agosto/2026: seg 3,10,17,24,31 + qui 6,13,20,27 = 9; reposição extra em
+  // 04/ago (terça, fora da agenda) soma no mês em que a aula acontece.
+  const ago = montaSnapshotFechamento({
+    ...base,
+    mesRef: "2026-08-01",
+    year: 2026,
+    month0: 7,
+    registros: [{ tipo: "extra", quantidade: 1, data: "2026-08-04", valor: null }],
+  });
+  assert.equal(ago.faltas, 0);
+  assert.equal(ago.extras, 1);
+  assert.equal(ago.aulas_esperadas, 9);
+  assert.equal(ago.valor_final, 800); // (9+1)×80 — agosto ganha a reposição
+});
+
 test("resumoMes soma mensalidade + por_aula e deixa créditos de fora", () => {
   const mensal = montaItemFechamento(
     { ...ALUNO_BASE, valor_mensal: 300, modo_cobranca: "mensalidade" as const },

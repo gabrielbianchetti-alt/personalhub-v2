@@ -46,8 +46,11 @@ export default async function CobrancaPage({
   const mesRef = mes && MES_RE.test(mes) ? mes : mesAtual;
   const ehMesAtual = mesRef === mesAtual;
   const { year, month } = parteIso(mesRef);
-  // Até quando contar exceções: hoje (mês corrente), fim do mês (passado),
-  // ou nada (futuro — projeção pura pelos dias fixos).
+  // Corte do PACOTE (usadas × agendadas): hoje (mês corrente), fim do mês
+  // (passado), ou nada (futuro). Os REGISTROS do mês em foco vêm do mês
+  // INTEIRO (ciclo-03): reposição agendada é extra com data futura e precisa
+  // aparecer na visão ao vivo — o snapshot do envio já lia o mês todo, e a
+  // visão cortada em hoje mostraria um valor ≠ do congelado no "enviar".
   const fimMes = isoDe(year, month, diasNoMes(year, month));
   const ateData = ehMesAtual ? sp.iso : mesRef > mesAtual ? mesRef : fimMes;
 
@@ -61,7 +64,7 @@ export default async function CobrancaPage({
       .order("nome"),
     mesRef > mesAtual
       ? Promise.resolve<RegistroLeve[]>([]) // futuro: projeção pura pelos dias fixos
-      : buscaRegistros(supabase, { de: mesRef, ate: ateData }),
+      : buscaRegistros(supabase, { de: mesRef, ate: fimMes }),
     supabase
       .from("fechamentos")
       .select(

@@ -64,6 +64,29 @@ test("montaAlunosHoje: esperado com falta + avulso com extra", () => {
   assert.equal(b?.extras, 1);
 });
 
+test("montaAlunosHoje (ciclo-03): reposição com hora entra ordenada; extra sem hora vai pro fim", () => {
+  const lista = montaAlunosHoje(
+    [
+      { id: "A", nome: "Ana", horario: "09:00", horarios: {}, dias_semana: [4] },
+      { id: "R", nome: "Rui", horario: "", horarios: {}, dias_semana: [] }, // reposição 07:00
+      { id: "S", nome: "Sá", horario: "", horarios: {}, dias_semana: [] }, // extra sem hora
+    ],
+    [
+      { aluno_id: "R", tipo: "extra" as const, quantidade: 1, horario: "07:00:00" },
+      { aluno_id: "S", tipo: "extra" as const, quantidade: 1 },
+    ],
+    4, // quinta
+  );
+  const r = lista.find((x) => x.id === "R");
+  assert.equal(r?.avulso, true);
+  assert.equal(r?.horario, "07:00"); // "HH:MM:SS" do banco vira "HH:MM"
+  // Ordem: reposição 07:00 < agenda 09:00 < extra sem hora (fim).
+  assert.deepEqual(
+    lista.map((x) => x.id),
+    ["R", "A", "S"],
+  );
+});
+
 test("montaAlunosHoje: aula de pacote vira card de pacote com id do registro", () => {
   const lista = montaAlunosHoje(
     [{ id: "C", nome: "Gina", horario: "", horarios: {}, dias_semana: [] }],

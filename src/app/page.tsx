@@ -23,7 +23,7 @@ export default async function HojePage() {
   const sp = agoraSP(); // fuso América/São_Paulo — nunca o relógio do servidor
   const janelaInicio = addDias(sp.iso, -7);
 
-  const [alunosRes, registros, aulasPacoteHoje, resolvidosRes, profRes] =
+  const [alunosRes, registros, aulasPacoteHoje, resolvidosRes, profRes, futuras] =
     await Promise.all([
       supabase
         .from("alunos")
@@ -35,9 +35,22 @@ export default async function HojePage() {
       buscaAulasPacote(supabase, { de: sp.iso, ate: sp.iso }), // aulas de pacote de hoje
       supabase.from("dias_resolvidos").select("data").gte("data", janelaInicio),
       supabase.from("professores").select("created_at, nome, chave_pix").single(),
+      // Reposições agendadas (ciclo-03): extras com data à frente — alimentam
+      // a lista "Agendadas" do sheet (o Hoje do dia D as pega pela busca acima).
+      buscaRegistros(supabase, { depoisDe: sp.iso }),
     ]);
 
   const ativos = alunosRes.data ?? [];
+  const nomePorId = new Map(ativos.map((a) => [a.id, a.nome]));
+  const agendadas = futuras
+    .filter((r) => r.tipo === "extra" && nomePorId.has(r.aluno_id))
+    .map((r) => ({
+      alunoId: r.aluno_id,
+      nome: nomePorId.get(r.aluno_id)!,
+      dataIso: r.data,
+      horario: r.horario,
+    }))
+    .sort((a, b) => a.dataIso.localeCompare(b.dataIso) || a.nome.localeCompare(b.nome));
 
   const alunosHoje = montaAlunosHoje(
     ativos,
@@ -93,12 +106,15 @@ export default async function HojePage() {
 
       <CheckinList
         hojeIso={sp.iso}
+        minDia={addDias(sp.iso, -7)}
+        maxDia={addDias(sp.iso, 365)}
         nowMinutes={sp.hour * 60 + sp.minute}
         initial={alunosHoje}
         roster={ativos
           .map((a) => ({ id: a.id, nome: a.nome }))
           .sort((a, b) => a.nome.localeCompare(b.nome))}
         pendencias={pendencias}
+        agendadasInitial={agendadas}
       />
     </div>
   );

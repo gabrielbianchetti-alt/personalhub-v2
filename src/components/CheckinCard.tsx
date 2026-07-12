@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Check } from "lucide-react";
+import { X, Check, CalendarPlus } from "lucide-react";
 import type { AlunoHojeVM } from "@/lib/hoje";
 
 export function CheckinCard({
@@ -10,6 +10,7 @@ export function CheckinCard({
   onToggleFalta,
   onTirarExtra,
   onCancelarPacote,
+  onRepor,
 }: {
   aluno: AlunoHojeVM;
   isPast: boolean;
@@ -17,11 +18,15 @@ export function CheckinCard({
   onToggleFalta: (id: string) => void;
   onTirarExtra: (id: string) => void;
   onCancelarPacote?: (registroId: string, alunoId: string) => void;
+  /** abre o agendamento de reposição com o aluno já escolhido (ciclo-03) */
+  onRepor?: (id: string) => void;
 }) {
   const subtitle = aluno.pacote
     ? aluno.horario || "Aula do pacote"
     : aluno.avulso
-      ? "Aula extra"
+      ? aluno.horario
+        ? `${aluno.horario} · reposição`
+        : "Aula extra"
       : aluno.horario || "Presumido";
   // Passado não-resolvido lê como "feito": check silencioso (--success), sem dimming.
   const feito = isPast && !aluno.faltou && !aluno.avulso;
@@ -88,21 +93,50 @@ export function CheckinCard({
         </button>
       )}
 
-      {/* Demais: corrigir é sempre possível, o chip permanece mesmo no passado. */}
-      {!aluno.pacote && (
+      {/* Avulso (extra/reposição): "Faltou" aqui cobraria errado — a extra soma
+          incondicionalmente no motor. O gesto do no-show é CANCELAR a extra
+          (mesmo padrão do pacote) — julgador F1 do ciclo-03. */}
+      {!aluno.pacote && aluno.avulso && (
         <button
           type="button"
-          aria-pressed={aluno.faltou}
-          onClick={() => onToggleFalta(aluno.id)}
-          className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-medium transition-colors ${
-            aluno.faltou
-              ? "bg-danger text-white"
-              : "bg-surface-soft text-text-muted active:bg-danger/10"
-          }`}
+          onClick={() => onTirarExtra(aluno.id)}
+          aria-label={`Cancelar aula extra de ${aluno.nome}`}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-soft px-3.5 py-2.5 text-sm font-medium text-text-muted active:bg-danger/10 active:text-danger"
         >
           <X size={16} strokeWidth={2.4} />
-          Faltou
+          Cancelar
         </button>
+      )}
+
+      {/* Agenda fixa: corrigir é sempre possível, o chip permanece no passado.
+          Com falta marcada, nasce o "Repor" — falta+reposição no mesmo fluxo. */}
+      {!aluno.pacote && !aluno.avulso && (
+        <div className="flex shrink-0 items-center gap-2">
+          {aluno.faltou && onRepor && (
+            <button
+              type="button"
+              onClick={() => onRepor(aluno.id)}
+              aria-label={`Agendar reposição de ${aluno.nome}`}
+              className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3.5 py-2.5 text-sm font-medium text-accent active:opacity-80"
+            >
+              <CalendarPlus size={16} strokeWidth={2.2} />
+              Repor
+            </button>
+          )}
+          <button
+            type="button"
+            aria-pressed={aluno.faltou}
+            onClick={() => onToggleFalta(aluno.id)}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-medium transition-colors ${
+              aluno.faltou
+                ? "bg-danger text-white"
+                : "bg-surface-soft text-text-muted active:bg-danger/10"
+            }`}
+          >
+            <X size={16} strokeWidth={2.4} />
+            Faltou
+          </button>
+        </div>
       )}
     </article>
   );

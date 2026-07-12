@@ -29,6 +29,14 @@ export interface RosterVM {
   nome: string;
 }
 
+/** Reposição agendada (extra com data futura) — lista/cancelamento no sheet. */
+export interface AgendadaVM {
+  alunoId: string;
+  nome: string;
+  dataIso: string;
+  horario: string | null;
+}
+
 export interface PendenciaVM {
   dataIso: string;
   esperados: RosterVM[];
@@ -36,7 +44,9 @@ export interface PendenciaVM {
 
 export function montaAlunosHoje(
   ativos: Pick<Aluno, "id" | "nome" | "horario" | "horarios" | "dias_semana">[],
-  registrosHoje: Pick<RegistroAula, "aluno_id" | "tipo" | "quantidade">[],
+  registrosHoje: (Pick<RegistroAula, "aluno_id" | "tipo" | "quantidade"> & {
+    horario?: string | null; // reposição agendada tem hora (ciclo-03)
+  })[],
   dowHoje: number,
   aulasPacoteHoje: AulaPacoteHoje[] = [],
 ): AlunoHojeVM[] {
@@ -44,9 +54,12 @@ export function montaAlunosHoje(
     registrosHoje.filter((r) => r.tipo === "falta").map((r) => r.aluno_id),
   );
   const extras = new Map<string, number>();
+  const horaExtra = new Map<string, string>(); // hora da reposição, se houver
   for (const r of registrosHoje) {
-    if (r.tipo === "extra")
+    if (r.tipo === "extra") {
       extras.set(r.aluno_id, (extras.get(r.aluno_id) ?? 0) + (r.quantidade ?? 1));
+      if (r.horario) horaExtra.set(r.aluno_id, r.horario.slice(0, 5));
+    }
   }
 
   const esperados = ativos
@@ -71,7 +84,9 @@ export function montaAlunosHoje(
     .map((a) => ({
       id: a.id,
       nome: a.nome,
-      horario: "",
+      // Reposição agendada com hora entra na posição certa da lista (ciclo-03);
+      // extra sem hora continua no fim ("99" no sort).
+      horario: horaExtra.get(a.id) ?? "",
       faltou: false,
       extras: extras.get(a.id) ?? 0,
       avulso: true,

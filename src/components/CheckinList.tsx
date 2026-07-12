@@ -3,7 +3,8 @@
 import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import type { AlunoHojeVM, PendenciaVM, RosterVM } from "@/lib/hoje";
+import type { AgendadaVM, AlunoHojeVM, PendenciaVM, RosterVM } from "@/lib/hoje";
+import { dataCurta } from "@/lib/datas";
 import {
   marcarFalta,
   desmarcarFalta,
@@ -25,19 +26,29 @@ function toMinutes(horario: string): number | null {
 
 export function CheckinList({
   hojeIso,
+  minDia,
+  maxDia,
   nowMinutes,
   initial,
   roster,
   pendencias,
+  agendadasInitial = [],
 }: {
   hojeIso: string;
+  /** janela da extra: hoje−7d … hoje+365d (ciclo-03) */
+  minDia: string;
+  maxDia: string;
   nowMinutes: number;
   initial: AlunoHojeVM[];
   roster: RosterVM[];
   pendencias: PendenciaVM[];
+  /** reposições futuras já agendadas (server) */
+  agendadasInitial?: AgendadaVM[];
 }) {
   const [alunos, setAlunos] = useState<AlunoHojeVM[]>(initial);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [agendadas, setAgendadas] = useState<AgendadaVM[]>(agendadasInitial);
+  // null = fechado; {alunoPre:null} = extra normal; {alunoPre} = modo Repor.
+  const [sheet, setSheet] = useState<{ alunoPre: RosterVM | null } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   // Anúncio pro leitor de tela: o check-in (a tese do app) precisava confirmar
   // SUCESSO, não só erro. Repetir a mesma msg acrescenta um caractere invisível
@@ -83,13 +94,41 @@ export function CheckinList({
     );
   };
 
-  const addExtra = (rosterId: string, valor: number | null) => {
+  const addExtra = (
+    rosterId: string,
+    valor: number | null,
+    diaIso: string,
+    horario: string | null,
+  ) => {
     vibra();
-    setSheetOpen(false);
+    setSheet(null);
+    const nome =
+      alunos.find((a) => a.id === rosterId)?.nome ??
+      roster.find((x) => x.id === rosterId)?.nome ??
+      "aluno";
+
+    // Reposição agendada (dia ≠ hoje): não entra na lista de hoje — vai pra
+    // "Agendadas" e aparece sozinha no Hoje do dia certo (ciclo-03).
+    if (diaIso !== hojeIso) {
+      const nova: AgendadaVM = { alunoId: rosterId, nome, dataIso: diaIso, horario };
+      anunciar(`Reposição de ${nome} agendada para ${dataCurta(diaIso)}`);
+      setAgendadas((prev) =>
+        [...prev.filter((g) => !(g.alunoId === rosterId && g.dataIso === diaIso)), nova].sort(
+          (a, b) => a.dataIso.localeCompare(b.dataIso) || a.nome.localeCompare(b.nome),
+        ),
+      );
+      persistir(
+        () => adicionarExtra(rosterId, diaIso, "checkin", valor, horario),
+        () =>
+          setAgendadas((prev) =>
+            prev.filter((g) => !(g.alunoId === rosterId && g.dataIso === diaIso)),
+          ),
+      );
+      return;
+    }
+
     const existente = alunos.find((a) => a.id === rosterId);
-    anunciar(
-      `Aula extra de ${existente?.nome ?? roster.find((x) => x.id === rosterId)?.nome ?? "aluno"}`,
-    );
+    anunciar(`Aula extra de ${nome}`);
     const desfazer = () =>
       setAlunos((prev) =>
         existente
@@ -108,10 +147,35 @@ export function CheckinList({
       if (!r) return prev;
       return [
         ...prev,
-        { id: r.id, nome: r.nome, horario: "", faltou: false, extras: 1, avulso: true },
+        {
+          id: r.id,
+          nome: r.nome,
+          horario: horario ?? "",
+          faltou: false,
+          extras: 1,
+          avulso: true,
+        },
       ];
     });
-    persistir(() => adicionarExtra(rosterId, hojeIso, "checkin", valor), desfazer);
+    persistir(
+      () => adicionarExtra(rosterId, hojeIso, "checkin", valor, horario),
+      desfazer,
+    );
+  };
+
+  // Cancelar reposição agendada (antes do dia) — × na lista "Agendadas".
+  const cancelarAgendada = (alunoId: string, dataIso: string) => {
+    const alvo = agendadas.find((g) => g.alunoId === alunoId && g.dataIso === dataIso);
+    if (!alvo) return;
+    vibra();
+    setAgendadas((prev) =>
+      prev.filter((g) => !(g.alunoId === alunoId && g.dataIso === dataIso)),
+    );
+    anunciar(`Reposição de ${alvo.nome} cancelada`);
+    persistir(
+      () => removerExtra(alunoId, dataIso),
+      () => setAgendadas((prev) => [...prev, alvo]),
+    );
   };
 
   // Aula de pacote lançada por engano: cancelar devolve o crédito, sem sair do Hoje.
@@ -218,6 +282,10 @@ export function CheckinList({
                 onToggleFalta={toggleFalta}
                 onTirarExtra={tirarExtra}
                 onCancelarPacote={cancelarPacote}
+                onRepor={(id) => {
+                  const r = roster.find((x) => x.id === id);
+                  if (r) setSheet({ alunoPre: r });
+                }}
               />
             </Fragment>
           ))}
@@ -227,7 +295,7 @@ export function CheckinList({
       <section className="px-5 pt-3">
         <button
           type="button"
-          onClick={() => setSheetOpen(true)}
+          onClick={() => setSheet({ alunoPre: null })}
           className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-accent-soft py-3.5 text-sm font-medium text-accent transition-colors active:bg-accent-soft/40"
         >
           <Plus size={18} strokeWidth={2.4} />
@@ -237,13 +305,19 @@ export function CheckinList({
 
       {/* Montado só quando aberto: o Sheet fechado mantinha um overlay fixed
           com backdrop-filter vivo (custo de compositor em TODA rolagem do Hoje). */}
-      {sheetOpen && (
+      {sheet && (
         <ExtraSheet
           open
           roster={roster}
           esperadosIds={esperadosIds}
+          hojeIso={hojeIso}
+          minDia={minDia}
+          maxDia={maxDia}
+          alunoPre={sheet.alunoPre}
+          agendadas={agendadas}
           onPick={addExtra}
-          onClose={() => setSheetOpen(false)}
+          onCancelarAgendada={cancelarAgendada}
+          onClose={() => setSheet(null)}
         />
       )}
     </>
