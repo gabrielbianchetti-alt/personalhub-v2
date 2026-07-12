@@ -49,4 +49,19 @@ const [email, password] = process.argv.slice(2);
     .insert({ professor_id: "00000000-0000-0000-0000-000000000000", nome: "Invasor" })
     .select("id");
   console.log("ALUNOS insert alheio (espera erro RLS) ->", "err:", bad.error?.message || "PASSOU (RUIM!)");
+
+  // fechamentos (ciclo-02, critério f): a query de dívidas varre meses passados
+  // SEM filtro de professor no client — a policy é quem isola. Uma conta nova
+  // não pode ver linha NENHUMA (as de outros professores existem no banco).
+  const fech = await supabase
+    .from("fechamentos")
+    .select("aluno_id, mes_referencia, status")
+    .lt("mes_referencia", "2100-01-01");
+  const vazou = (fech.data ?? []).length;
+  console.log(
+    "FECHAMENTOS select cross-tenant (espera 0 linhas) ->",
+    "rows:", vazou,
+    "err:", fech.error?.message || "none",
+    vazou === 0 ? "| RLS OK" : "| VAZOU (RUIM!)",
+  );
 })();
