@@ -5,6 +5,7 @@ import {
   type RegistroLeve,
 } from "@/lib/supabase/registros";
 import {
+  addDias,
   addMeses,
   agoraSP,
   diasNoMes,
@@ -14,6 +15,12 @@ import {
   parteIso,
 } from "@/lib/datas";
 import { progressoPacote } from "@/lib/aulas";
+import {
+  DIVIDA_MESES_RETROATIVOS,
+  montaDividas,
+  type AlunoParaDivida,
+  type FechamentoPassado,
+} from "@/lib/dividas";
 import {
   montaItemCreditos,
   montaItemFechamento,
@@ -44,11 +51,11 @@ export default async function CobrancaPage({
   const fimMes = isoDe(year, month, diasNoMes(year, month));
   const ateData = ehMesAtual ? sp.iso : mesRef > mesAtual ? mesRef : fimMes;
 
-  const [alunosRes, registros, fechamentosRes, profRes] = await Promise.all([
+  const [alunosRes, registros, fechamentosRes, profRes, fechPassadosRes] = await Promise.all([
     supabase
       .from("alunos")
       .select(
-        "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas",
+        "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas, created_at",
       )
       .eq("status", "ativo")
       .order("nome"),
@@ -65,6 +72,16 @@ export default async function CobrancaPage({
       .from("professores")
       .select("template_mensagem, template_lembrete, nome, chave_pix")
       .single(),
+    // Dívidas (ciclo-02): TODAS as linhas de meses passados — pago só marca
+    // cobertura (bloqueia o "mês sem linha" sem virar dívida). Só no corrente.
+    ehMesAtual
+      ? supabase
+          .from("fechamentos")
+          .select(
+            "aluno_id, mes_referencia, status, valor_final, aulas_esperadas, faltas, extras, ajuste_manual, ajuste_motivo, enviado_em, pago_em",
+          )
+          .lt("mes_referencia", mesAtual)
+      : Promise.resolve({ data: [] as FechamentoPassado[] }),
   ]);
   // Pré-migração: degrada progressivamente (0015 sem lembrete → 0006 sem Pix)
   // em vez de quebrar — e sem perder a chave Pix se só a 0015 faltar.
@@ -123,7 +140,30 @@ export default async function CobrancaPage({
   const ativosIds = new Set(ativos.map((a) => a.id));
   const suspensosIds = [...fechamentos.keys()].filter((id) => !ativosIds.has(id));
 
-  const [pacotesRes, todasAulas, suspensosRes, vendasRes] = await Promise.all([
+  // Dívidas: donos de linha pendente que não estão nos ativos (suspensos) +
+  // janela de registros retroativos p/ derivar valor ao vivo (aberto/sem linha).
+  const fechPassados = (fechPassadosRes.data ?? []) as FechamentoPassado[];
+  const devedoresForaIds = [
+    ...new Set(
+      fechPassados
+        .filter((f) => f.status !== "pago" && !ativosIds.has(f.aluno_id))
+        .map((f) => f.aluno_id),
+    ),
+  ];
+  const foraIds = [...new Set([...suspensosIds, ...devedoresForaIds])];
+  const dividaDesde = addMeses(mesAtual, -DIVIDA_MESES_RETROATIVOS);
+  const precisaJanelaDivida =
+    ehMesAtual &&
+    (fechPassados.some(
+      (f) => f.status === "aberto" && f.mes_referencia >= dividaDesde,
+    ) ||
+      ativos.some(
+        (a) =>
+          a.modo_cobranca !== "creditos" &&
+          `${(a.created_at ?? mesAtual).slice(0, 7)}-01` < mesAtual,
+      ));
+
+  const [pacotesRes, todasAulas, suspensosRes, vendasRes, registrosDivida] = await Promise.all([
     creditoIds.length
       ? supabase
           .from("pacotes_creditos")
@@ -134,13 +174,13 @@ export default async function CobrancaPage({
     creditoIds.length
       ? buscaAulasPacote(supabase, { alunoIds: creditoIds })
       : Promise.resolve([]),
-    suspensosIds.length
+    foraIds.length
       ? supabase
           .from("alunos")
           .select(
-            "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas",
+            "id, nome, telefone, valor_mensal, valor_dupla, valor_trio, modo_cobranca, dias_semana, turmas, status, created_at",
           )
-          .in("id", suspensosIds)
+          .in("id", foraIds)
       : Promise.resolve({ data: [] }),
     // Pacotes VENDIDOS no mês em foco: a receita de créditos é a venda (§4.3),
     // mas o card-herói a ignorava — "quanto entrou" ficava subestimado.
@@ -149,6 +189,12 @@ export default async function CobrancaPage({
       .select("valor")
       .gte("created_at", mesRef)
       .lt("created_at", addMeses(mesRef, 1)),
+    // Exceções da janela retroativa — derivação ao vivo das dívidas. Fica em
+    // busca SEPARADA da do mês em foco de propósito: misturar os ranges faria
+    // registros de meses passados vazarem na contagem do mês corrente.
+    precisaJanelaDivida
+      ? buscaRegistros(supabase, { de: dividaDesde, ate: addDias(mesAtual, -1) })
+      : Promise.resolve<RegistroLeve[]>([]),
   ]);
   const vendasPacotes = {
     qtd: (vendasRes.data ?? []).length,
@@ -194,8 +240,11 @@ export default async function CobrancaPage({
 
   // Suspensos que ainda têm fechamento neste mês: não somem da Cobrança nem do
   // "Recebido" — dinheiro já trabalhado/quitado não pode evaporar ao suspender.
-  const itensSuspensos = (suspensosRes.data ?? [])
-    .filter((a) => a.modo_cobranca !== "creditos")
+  // (O select agora traz também devedores fora dos ativos — filtra de volta.)
+  const suspensosSet = new Set(suspensosIds);
+  const foraAlunos = suspensosRes.data ?? [];
+  const itensSuspensos = foraAlunos
+    .filter((a) => suspensosSet.has(a.id) && a.modo_cobranca !== "creditos")
     .map((a) => ({
       ...montaItemFechamento(
         a,
@@ -208,6 +257,33 @@ export default async function CobrancaPage({
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome));
   itens.push(...itensSuspensos);
+
+  // Dívidas de meses anteriores (ciclo-02) — banner só no mês corrente.
+  const dividas = ehMesAtual
+    ? montaDividas({
+        mesAtual,
+        alunos: [
+          ...ativos.map(
+            (a): AlunoParaDivida => ({
+              ...a,
+              turmas: a.turmas ?? {},
+              status: "ativo",
+              created_at: a.created_at ?? mesAtual,
+            }),
+          ),
+          ...foraAlunos.map(
+            (a): AlunoParaDivida => ({
+              ...a,
+              turmas: a.turmas ?? {},
+              status: a.status ?? "suspenso",
+              created_at: a.created_at ?? mesAtual,
+            }),
+          ),
+        ],
+        fechamentosPassados: fechPassados,
+        registros: registrosDivida,
+      })
+    : null;
 
   return (
     <div className="relative flex flex-1 flex-col px-5 pt-12">
@@ -235,6 +311,7 @@ export default async function CobrancaPage({
         templateLembrete={prof?.template_lembrete ?? null}
         chavePix={prof?.chave_pix ?? null}
         vendasPacotes={vendasPacotes}
+        dividas={dividas}
       />
     </div>
   );

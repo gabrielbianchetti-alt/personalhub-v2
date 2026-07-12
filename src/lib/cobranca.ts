@@ -22,6 +22,21 @@ import type {
   TurmaDia,
 } from "./tipos.ts";
 
+/** Campos do fechamento que o view-model realmente lê — permite passar linhas
+ * parciais (ex.: a query de dívidas) sem carregar o Fechamento inteiro. */
+export type FechamentoDados = Pick<
+  Fechamento,
+  | "status"
+  | "aulas_esperadas"
+  | "faltas"
+  | "extras"
+  | "ajuste_manual"
+  | "ajuste_motivo"
+  | "valor_final"
+  | "enviado_em"
+  | "pago_em"
+>;
+
 // Campos do aluno que definem o preço por dia (dupla/trio) no por_aula.
 interface CamposTurma {
   dias_semana: number[];
@@ -78,6 +93,8 @@ export interface CobrancaItemVM {
   diasAula: string[];
   /** quando a cobrança foi mandada — alimenta o follow-up de esquecidas */
   enviadoEm: string | null;
+  /** quando foi pago — carimbo "Pago · 08/jul" no card (ciclo-02) */
+  pagoEm: string | null;
   /** só créditos */
   saldo: number | null;
   progresso: ProgressoPacote | null;
@@ -101,7 +118,7 @@ export function montaItemFechamento(
     | "modo_cobranca"
   >,
   registrosDoMes: Pick<RegistroAula, "tipo" | "quantidade" | "data" | "valor">[],
-  fechamento: Fechamento | null,
+  fechamento: FechamentoDados | null,
   year: number,
   month0: number,
 ): CobrancaItemVM {
@@ -175,6 +192,7 @@ export function montaItemFechamento(
     valorAula: modo === "por_aula" ? Number(aluno.valor_mensal ?? 0) : null,
     diasAula: diasAulaIso.map((iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`),
     enviadoEm: fechamento?.enviado_em ?? null,
+    pagoEm: fechamento?.pago_em ?? null,
     saldo: null,
     progresso: null,
     ultimoPacote: null,
@@ -206,6 +224,7 @@ export function montaItemCreditos(
     valorAula: null,
     diasAula: [], // pacote não tem agenda fixa
     enviadoEm: null,
+    pagoEm: null,
     saldo: restantes,
     progresso,
     ultimoPacote,

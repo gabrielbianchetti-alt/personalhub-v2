@@ -19,10 +19,12 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { resumoMes, type CobrancaItemVM } from "@/lib/cobranca";
-import { formatBRL, listaDatas } from "@/lib/datas";
+import type { DividasVM } from "@/lib/dividas";
+import { diaMesCurto, formatBRL, listaDatas, parteIso } from "@/lib/datas";
 import { vibra } from "@/lib/haptico";
 import { ProgressRing } from "./ProgressRing";
 import { Portal } from "./Portal";
+import { DividasBanner } from "./DividasBanner";
 import {
   buscaReciboFile,
   compartilharImagem,
@@ -69,6 +71,7 @@ export function CobrancaLista({
   templateLembrete = null,
   chavePix,
   vendasPacotes = null,
+  dividas = null,
 }: {
   itens: CobrancaItemVM[];
   mesRef: string;
@@ -79,9 +82,13 @@ export function CobrancaLista({
   templateLembrete?: string | null;
   chavePix: string | null;
   vendasPacotes?: { qtd: number; total: number } | null;
+  /** dívidas de meses anteriores — só chega no mês corrente (ciclo-02) */
+  dividas?: DividasVM | null;
 }) {
   const router = useRouter();
   const [lista, setLista] = useState(itens);
+  // Filtro por status (ciclo-02) — chips + toque nos agregados do card-herói.
+  const [filtro, setFiltro] = useState<"todos" | CobrancaItemVM["status"]>("todos");
   const [sheet, setSheet] = useState<SheetState>(null);
   // Fechamento guiado: fila de alunoIds ainda por cobrar + total da rodada.
   const [guia, setGuia] = useState<{ fila: string[]; total: number } | null>(null);
@@ -107,10 +114,24 @@ export function CobrancaLista({
   // Item do sheet resolvido na renderização — sempre fresco (telefone, status).
   const sheetItem = sheet ? (lista.find((i) => i.alunoId === sheet.alunoId) ?? null) : null;
 
-  const setStatus = (alunoId: string, status: CobrancaItemVM["status"]) =>
+  const setStatus = (
+    alunoId: string,
+    status: CobrancaItemVM["status"],
+    patch?: Partial<CobrancaItemVM>,
+  ) =>
     setLista((prev) =>
-      prev.map((i) => (i.alunoId === alunoId ? { ...i, status } : i)),
+      prev.map((i) => (i.alunoId === alunoId ? { ...i, status, ...patch } : i)),
     );
+
+  // Alterna o filtro (tocar de novo volta a "todos").
+  const alternaFiltro = (f: CobrancaItemVM["status"]) =>
+    setFiltro((atual) => (atual === f ? "todos" : f));
+
+  // Créditos não tem status de fechamento — só aparece em "todos".
+  const visiveis =
+    filtro === "todos"
+      ? lista
+      : lista.filter((i) => i.modo !== "creditos" && i.status === filtro);
 
   // A action devolve {ok:false, erro} para erro esperado (mensagem pt-BR chega
   // até em produção); o catch cobre só falha de rede/inesperada.
@@ -198,10 +219,13 @@ export function CobrancaLista({
   const aoPagar = (item: CobrancaItemVM) => {
     vibra();
     const statusAnterior = item.status;
-    setStatus(item.alunoId, "pago");
+    const pagoEmAnterior = item.pagoEm;
+    // pagoEm otimista: o carimbo "Pago · dd/mmm" aparece na hora (o servidor
+    // regrava com o timestamp real no revalidate).
+    setStatus(item.alunoId, "pago", { pagoEm: new Date().toISOString() });
     persistir(
       () => marcarPago(item.alunoId, mesRef),
-      () => setStatus(item.alunoId, statusAnterior),
+      () => setStatus(item.alunoId, statusAnterior, { pagoEm: pagoEmAnterior }),
     );
     // Fecha o loop de feedback do "Pago" (que não tinha celebração) + undo.
     setToast({
@@ -209,7 +233,7 @@ export function CobrancaLista({
       acao: {
         rotulo: "Desfazer",
         fn: () => {
-          setStatus(item.alunoId, statusAnterior);
+          setStatus(item.alunoId, statusAnterior, { pagoEm: pagoEmAnterior });
           persistir(
             () => reabrirFechamento(item.alunoId, mesRef),
             () => setStatus(item.alunoId, "pago"),
@@ -227,10 +251,11 @@ export function CobrancaLista({
       acao: {
         rotulo: "Reabrir",
         fn: () => {
-          setStatus(item.alunoId, "aberto");
+          const pagoEmAnterior = item.pagoEm;
+          setStatus(item.alunoId, "aberto", { pagoEm: null });
           persistir(
             () => reabrirFechamento(item.alunoId, mesRef),
-            () => setStatus(item.alunoId, "pago"),
+            () => setStatus(item.alunoId, "pago", { pagoEm: pagoEmAnterior }),
           );
         },
       },
@@ -298,6 +323,11 @@ export function CobrancaLista({
         </Portal>
       )}
 
+      {/* "Quem me deve?" — dívidas de meses anteriores (só no mês corrente). */}
+      {dividas && (
+        <DividasBanner dividas={dividas} anoAtual={parteIso(mesRef).year} />
+      )}
+
       {/* Card flutuante de resumo — 3º lugar sancionado de glass (§6.4).
           position via style: `.glass` é unlayered e sobrepõe a utility
           `.sticky` (layer utilities) do Tailwind v4 — sem isto o card não gruda. */}
@@ -314,19 +344,45 @@ export function CobrancaLista({
               {formatBRL(resumo.totalPrevisto)}
             </p>
           </div>
+          {/* Agregados tocáveis: "3 enviadas" aplica o filtro (ciclo-02). */}
           <p className="pb-1 text-right text-xs leading-relaxed text-text-muted">
             {resumo.pagos > 0 && (
-              <span className="whitespace-nowrap font-medium text-success">
+              <button
+                type="button"
+                aria-pressed={filtro === "pago"}
+                onClick={() => alternaFiltro("pago")}
+                className={`whitespace-nowrap font-medium text-success active:opacity-70 ${
+                  filtro === "pago" ? "underline underline-offset-2" : ""
+                }`}
+              >
                 {resumo.pagos} pagas
-              </span>
+              </button>
             )}
             {resumo.pagos > 0 && (resumo.enviados > 0 || resumo.abertos > 0) && " · "}
             {resumo.enviados > 0 && (
-              <span className="whitespace-nowrap">{resumo.enviados} enviadas</span>
+              <button
+                type="button"
+                aria-pressed={filtro === "enviado"}
+                onClick={() => alternaFiltro("enviado")}
+                className={`whitespace-nowrap active:opacity-70 ${
+                  filtro === "enviado" ? "underline underline-offset-2" : ""
+                }`}
+              >
+                {resumo.enviados} enviadas
+              </button>
             )}
             {resumo.enviados > 0 && resumo.abertos > 0 && " · "}
             {resumo.abertos > 0 && (
-              <span className="whitespace-nowrap">{resumo.abertos} abertas</span>
+              <button
+                type="button"
+                aria-pressed={filtro === "aberto"}
+                onClick={() => alternaFiltro("aberto")}
+                className={`whitespace-nowrap active:opacity-70 ${
+                  filtro === "aberto" ? "underline underline-offset-2" : ""
+                }`}
+              >
+                {resumo.abertos} abertas
+              </button>
             )}
           </p>
         </div>
@@ -377,6 +433,39 @@ export function CobrancaLista({
         )}
       </div>
 
+      {/* Chips de status — espelham o filtro dos agregados (ciclo-02). Só
+          fazem sentido onde há status real (mês corrente/passado). */}
+      {!somenteLeitura && lista.some((i) => i.modo !== "creditos") && (
+        <div
+          role="group"
+          aria-label="Filtrar cobranças por status"
+          className="mt-3 flex gap-2 overflow-x-auto"
+        >
+          {(
+            [
+              ["todos", "Todas"],
+              ["aberto", "Abertas"],
+              ["enviado", "Enviadas"],
+              ["pago", "Pagas"],
+            ] as const
+          ).map(([valor, rotulo]) => (
+            <button
+              key={valor}
+              type="button"
+              aria-pressed={filtro === valor}
+              onClick={() => setFiltro(valor)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors active:opacity-80 ${
+                filtro === valor
+                  ? "bg-text text-bg"
+                  : "bg-surface text-text-muted shadow-soft"
+              }`}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      )}
+
       {erro && (
         <p
           role="alert"
@@ -387,7 +476,14 @@ export function CobrancaLista({
       )}
 
       <ul className="mt-4 flex flex-col gap-3 pb-4">
-        {lista.map((item) => {
+        {visiveis.length === 0 && filtro !== "todos" && (
+          <li className="rounded-[14px] bg-surface p-6 text-center text-sm text-text-muted shadow-soft">
+            Nenhuma cobrança{" "}
+            {filtro === "aberto" ? "aberta" : filtro === "enviado" ? "enviada" : "paga"}{" "}
+            em {nomeMesAtual}.
+          </li>
+        )}
+        {visiveis.map((item) => {
           const dias = item.status === "enviado" ? diasDesde(item.enviadoEm) : 0;
           const esquecida = item.status === "enviado" && dias >= 3;
           return (
@@ -444,7 +540,14 @@ export function CobrancaLista({
                     </p>
                   )}
                   {item.modo !== "creditos" && item.status === "pago" && (
-                    <span className="selo mt-1 text-success">Pago</span>
+                    <span className="mt-1 flex items-baseline gap-1.5">
+                      <span className="selo text-success">Pago</span>
+                      {item.pagoEm && (
+                        <span className="font-money text-[11px] text-text-muted">
+                          · {diaMesCurto(item.pagoEm)}
+                        </span>
+                      )}
+                    </span>
                   )}
                   {item.modo !== "creditos" && item.status === "enviado" && (
                     <span

@@ -139,6 +139,12 @@ export function horarioDoDia(
   return horarioCurto(a.horario);
 }
 
+/** "08/jul" — dia + mês curto (em SP) de um timestamp; carimbo do pagamento. */
+export function diaMesCurto(tsIso: string): string {
+  const sp = agoraSP(new Date(tsIso));
+  return `${String(sp.day).padStart(2, "0")}/${MESES[sp.month].slice(0, 3)}`;
+}
+
 export function formatBRL(valor: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
