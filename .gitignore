@@ -33,6 +33,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# loop de produto (estratégia privada — repo é público)
+/DECISIONS.md
+/PRIORIZACAO.md
+/README-LOOP.md
+/docs/loop/
+
 # vercel
 .vercel
 
