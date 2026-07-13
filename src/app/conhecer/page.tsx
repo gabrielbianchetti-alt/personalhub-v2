@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { VitrineCobranca } from "@/components/VitrineCobranca";
 
 export const metadata: Metadata = {
   title: "PersonalHub — cobrança sem planilha para personal trainers",
@@ -67,6 +68,17 @@ export default function ConhecerPage() {
           Em acesso antecipado · seus dados são seus, saia quando quiser.
         </p>
       </header>
+
+      {/* Vitrine (pauta 2): a cena do produto — legenda do marketing visível
+          (é o que o leitor de tela recebe; o mockup em si é aria-hidden). */}
+      <section className="relative mx-auto mt-12 w-full max-w-sm">
+        <p className="mx-auto max-w-[330px] text-center text-sm leading-relaxed text-text-muted">
+          A mensagem que você adia todo mês —{" "}
+          <strong className="font-medium text-text">pronta</strong>. O extrato
+          explica o valor por você.
+        </p>
+        <VitrineCobranca />
+      </section>
 
       <section className="relative mx-auto mt-12 flex w-full max-w-sm flex-col gap-3">
         {PILARES.map((p) => (

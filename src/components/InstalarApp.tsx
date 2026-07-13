@@ -26,16 +26,21 @@ export function InstalarApp() {
 
   if (estado === "oculto") return null;
 
+  // Linha do card "Conta" do Config (pauta 2) — não é mais card próprio, e o
+  // botão rebaixou de bg-accent sólido p/ accent-soft: "Salvar" é o único fill
+  // de accent da tela (§6.5).
   return (
-    <div className="mt-3 rounded-[14px] bg-surface p-4 shadow-soft">
-      <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
-        Instalar o app
-      </p>
+    <div className="flex items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
       {estado === "prompt" ? (
         <>
-          <p className="mt-1.5 text-sm text-text-muted">
-            Na tela inicial, abre em tela cheia e funciona melhor no dia a dia.
-          </p>
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+              Instalar o app
+            </p>
+            <p className="mt-0.5 text-sm text-text-muted">
+              Na tela inicial, abre em tela cheia.
+            </p>
+          </div>
           <button
             type="button"
             onClick={async () => {
@@ -45,20 +50,25 @@ export function InstalarApp() {
               const { outcome } = await p.userChoice;
               if (outcome === "accepted") setEstado("oculto");
             }}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3 font-medium text-accent-contrast active:opacity-90"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent-soft px-4 py-2 text-sm font-medium text-accent active:opacity-90"
           >
-            <SquarePlus size={18} />
-            Adicionar à tela inicial
+            <SquarePlus size={16} />
+            Instalar
           </button>
         </>
       ) : (
-        <p className="mt-1.5 flex items-center gap-1.5 text-sm leading-relaxed text-text-muted">
-          <span>
-            No iPhone: toque em{" "}
-            <Share size={14} className="inline align-[-2px] text-text" /> Compartilhar
-            e depois em <strong className="text-text">Adicionar à Tela de Início</strong>.
-          </span>
-        </p>
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+            Instalar o app
+          </p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-sm leading-relaxed text-text-muted">
+            <span>
+              No iPhone: toque em{" "}
+              <Share size={14} className="inline align-[-2px] text-text" /> Compartilhar
+              e depois em <strong className="text-text">Adicionar à Tela de Início</strong>.
+            </span>
+          </p>
+        </div>
       )}
     </div>
   );

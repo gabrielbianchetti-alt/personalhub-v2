@@ -158,7 +158,13 @@ export function ConfigClient({
         <h1 className="font-display text-3xl text-text">Configurações</h1>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-soft">
+      {/* Passe de hierarquia (pauta 2): seções nomeadas em Schibsted guiam o
+          olho pro que ganha dinheiro; conteúdo dos cards intocado. */}
+      <h2 className="mt-6 px-1 font-display text-lg text-text">Cobrança</h2>
+      <p className="mt-0.5 px-1 text-sm text-text-muted">
+        O que sai no WhatsApp quando você cobra.
+      </p>
+      <div className="mt-3 flex flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-soft">
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
             Seu nome
@@ -286,6 +292,7 @@ export function ConfigClient({
         </button>
       </div>
 
+      <h2 className="mt-8 px-1 font-display text-lg text-text">Aparência</h2>
       <div className="mt-3 rounded-[14px] bg-surface p-4 shadow-soft">
         <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
           Tema
@@ -312,46 +319,52 @@ export function ConfigClient({
         </div>
       </div>
 
-      <InstalarApp />
+      <h2 className="mt-8 px-1 font-display text-lg text-text">Conta</h2>
+      <div className="mt-3 rounded-[14px] bg-surface p-4 shadow-soft">
+        <div className="divide-y divide-glass-border">
+          <InstalarApp />
 
-      {/* Fundação #6: sem canal, o primeiro usuário some em silêncio. */}
-      {telefoneWa(suporteWa) && (
-        <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
-          <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
-              Suporte
-            </p>
-            <p className="mt-0.5 text-sm text-text">
-              Achou um problema ou tem uma ideia?
-            </p>
+          {/* Fundação #6: sem canal, o primeiro usuário some em silêncio. */}
+          {telefoneWa(suporteWa) && (
+            <div className="flex items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+                  Suporte
+                </p>
+                <p className="mt-0.5 text-sm text-text">
+                  Achou um problema ou tem uma ideia?
+                </p>
+              </div>
+              <a
+                href={waLink(
+                  telefoneWa(suporteWa)!,
+                  "Oi! Preciso de ajuda com o PersonalHub.",
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-full bg-accent-soft px-4 py-2 text-sm font-medium text-accent active:opacity-90"
+              >
+                Chama no WhatsApp
+              </a>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+                E-mail
+              </p>
+              <p className="mt-0.5 truncate text-sm text-text">{email}</p>
+            </div>
+            <LogoutButton />
           </div>
-          <a
-            href={waLink(
-              telefoneWa(suporteWa)!,
-              "Oi! Preciso de ajuda com o PersonalHub.",
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 rounded-full bg-accent-soft px-4 py-2 text-sm font-medium text-accent active:opacity-90"
-          >
-            Chama no WhatsApp
-          </a>
         </div>
-      )}
-
-      <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
-            Conta
-          </p>
-          <p className="mt-0.5 truncate text-sm text-text">{email}</p>
-        </div>
-        <LogoutButton />
       </div>
 
-      {/* Zona de perigo (LGPD): sair de vez, levando tudo. Discreto de
-          propósito — é direito do titular, não call-to-action. */}
-      <div className="mt-3 flex items-center justify-between rounded-[14px] bg-surface p-4 shadow-soft">
+      {/* Zona de perigo (LGPD): sair de vez, levando tudo. Fora de card e com
+          respiro de propósito — é direito do titular, não call-to-action.
+          shadow-soft na pílula: sem o card, bg-surface-soft sumia no claro. */}
+      <div className="mt-10 flex items-center justify-between gap-3 px-1">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
             Excluir conta
@@ -367,7 +380,7 @@ export function ConfigClient({
             setErroExclusao(null);
             setExcluirAberto(true);
           }}
-          className="shrink-0 rounded-full bg-surface-soft px-4 py-2 text-sm font-medium text-danger active:bg-danger/10"
+          className="shrink-0 rounded-full bg-surface-soft px-4 py-2 text-sm font-medium text-danger shadow-soft active:bg-danger/10"
         >
           Excluir…
         </button>
