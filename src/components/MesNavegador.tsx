@@ -4,6 +4,7 @@
 // Passado é COBRÁVEL (mês encerrado — o caso clássico de cobrar dia 1-5);
 // só o futuro é etiquetado "prévia" (projeção, sem ações).
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addMeses } from "@/lib/datas";
@@ -22,6 +23,15 @@ export function MesNavegador({
   const router = useRouter();
   const ir = (delta: number) =>
     router.push(`/cobranca?mes=${addMeses(mesRef, delta)}`, { scroll: false });
+
+  // Pré-carrega os meses vizinhos em segundo plano: tocar em ‹ › vira
+  // navegação instantânea (janela de frescor = staleTimes.static do
+  // next.config; as actions revalidam /cobranca a cada mutação, então
+  // dado tocado nunca fica velho).
+  useEffect(() => {
+    router.prefetch(`/cobranca?mes=${addMeses(mesRef, -1)}`);
+    router.prefetch(`/cobranca?mes=${addMeses(mesRef, 1)}`);
+  }, [router, mesRef]);
 
   return (
     <div className="relative mt-1 flex items-center justify-between">

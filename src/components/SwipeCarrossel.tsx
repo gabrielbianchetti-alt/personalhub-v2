@@ -101,6 +101,26 @@ export function SwipeCarrossel({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // Abriu uma aba → aquece as OUTRAS em segundo plano (dados, não só shell:
+  // router.prefetch usa a janela static do staleTimes). Trocar de aba vira
+  // instantâneo; as actions revalidam o path certo a cada mutação. Fora do
+  // primeiro paint de propósito: requestIdleCallback (fallback 1.5s).
+  useEffect(() => {
+    if (idx === -1) return;
+    const aquecer = () => {
+      for (const aba of ABAS) if (aba !== pathname) router.prefetch(aba);
+    };
+    const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => number })
+      .requestIdleCallback;
+    if (ric) {
+      const id = ric(aquecer);
+      return () => (window as Window & { cancelIdleCallback?: (id: number) => void })
+        .cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(aquecer, 1500);
+    return () => window.clearTimeout(t);
+  }, [idx, pathname, router]);
+
   // Fora das 3 abas (perfil/config/novo): sem carrossel.
   if (idx === -1) return <>{children}</>;
 
