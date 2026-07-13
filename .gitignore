@@ -38,6 +38,8 @@ yarn-error.log*
 /PRIORIZACAO.md
 /README-LOOP.md
 /docs/loop/
+# diretoria de negócio (estratégia/GTM privada)
+/docs/gtm/
 
 # vercel
 .vercel
