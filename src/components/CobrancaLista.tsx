@@ -321,8 +321,20 @@ export function CobrancaLista({
             aria-live="polite"
             className="celebra pointer-events-none fixed inset-0 z-[70] flex items-center justify-center"
           >
-            <div className="glass rounded-2xl border border-glass-border px-9 py-7 shadow-soft">
+            <div className="glass flex flex-col items-center rounded-2xl border border-glass-border px-9 py-7 shadow-soft">
               <span className="selo selo-grande text-accent">Mês fechado</span>
+              {/* Calor no rito (ajuste estético 13/jul): o número que dá
+                  orgulho, na voz da marca — professor pra professor. */}
+              {resumo.totalPrevisto > 0 && (
+                <p className="mt-4 text-center text-sm leading-relaxed text-text-muted">
+                  <span className="font-money font-semibold text-text">
+                    {formatBRL(resumo.totalPrevisto)}
+                  </span>{" "}
+                  cobrados.
+                  <br />
+                  Agora é com o Pix. 👊
+                </p>
+              )}
             </div>
           </div>
         </Portal>

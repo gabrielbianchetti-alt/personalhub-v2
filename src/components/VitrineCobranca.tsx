@@ -18,7 +18,7 @@ export function VitrineCobranca() {
           <div className="min-w-0">
             <p className="truncate text-base font-medium text-text">Camila Rocha</p>
             <p className="mt-0.5 truncate text-sm text-text-muted">
-              12 aulas · 1 reposição — junho
+              12 aulas · 1 reposição
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end">
@@ -39,7 +39,7 @@ export function VitrineCobranca() {
           <div className="min-w-0">
             <p className="truncate text-base font-medium text-text">Rafael Pires</p>
             <p className="mt-0.5 truncate text-sm text-text-muted">
-              9 aulas · 1 extra — junho
+              9 aulas · 1 extra
             </p>
           </div>
           <p className="font-money shrink-0 text-[22px] font-semibold leading-tight text-text">

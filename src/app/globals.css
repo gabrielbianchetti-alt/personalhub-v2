@@ -136,10 +136,12 @@ select:focus-visible,
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  /* Claro pedia mais presença (o dark sempre teve mais profundidade que o
+     papel frio — ajuste estético de 13/jul): mesmas cores, +~35% de opacidade. */
   background:
-    radial-gradient(60% 50% at 85% 0%, rgba(11, 122, 102, 0.10) 0%, transparent 70%),
-    radial-gradient(55% 45% at 0% 100%, rgba(47, 179, 154, 0.08) 0%, transparent 70%),
-    radial-gradient(70% 60% at 50% 120%, rgba(52, 85, 122, 0.06) 0%, transparent 70%),
+    radial-gradient(60% 50% at 85% 0%, rgba(11, 122, 102, 0.14) 0%, transparent 70%),
+    radial-gradient(55% 45% at 0% 100%, rgba(47, 179, 154, 0.11) 0%, transparent 70%),
+    radial-gradient(70% 60% at 50% 120%, rgba(52, 85, 122, 0.08) 0%, transparent 70%),
     var(--bg);
 }
 /* Grão de papel (~2,5%): mata banding e reforça a textura CARIMBO. */
@@ -147,7 +149,7 @@ select:focus-visible,
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.025;
+  opacity: 0.032;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 [data-theme="dark"] .mesh-fundo {
@@ -263,7 +265,7 @@ select:focus-visible,
   transform: translateX(-50%);
   border-radius: 9999px;
   filter: blur(90px);
-  opacity: 0.3;
+  opacity: 0.38; /* claro: era 0.3 — sumia no papel frio (dark mantém 0.16) */
   background: radial-gradient(closest-side, var(--accent) 0%, rgba(11, 122, 102, 0.28) 45%, transparent 78%);
 }
 [data-theme="dark"] .aura {
